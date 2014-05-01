@@ -8,7 +8,8 @@ import ceylon.language.meta.model {
 shared alias TestError => String;
 shared alias Success => Null;
 shared alias TestResult => TestError|Success;
-shared alias ExpectCase<Type> => Boolean()|<Comparison->{Type+}>;
+shared alias ExpectCase<Elem> => Boolean()|<Comparison->{Elem+}>;
+shared alias ExpectAllCase<Elem> => <Comparison->{Elem+}>;
 
 shared abstract class NoArgs() of noArgs {}
 object noArgs extends NoArgs() {}
@@ -56,9 +57,9 @@ shared class ExpectAll<out Where = [Anything*]>({Where+} examples, {Callable<Boo
 
 }
 
-shared class Expect<Type>({ExpectCase<Type>+} expectations)
+shared class Expect<Elem>({ExpectCase<Elem>+} expectations)
         satisfies Block
-        given Type satisfies Comparable<Type> {
+        given Elem satisfies Comparable<Elem> {
 
     String strFor(Comparison key) {
         switch (key)
@@ -67,17 +68,17 @@ shared class Expect<Type>({ExpectCase<Type>+} expectations)
         case (smaller) { return "smaller than"; }
     }
 
-    [TestResult+] check(ExpectCase<Type> test) {
+    [TestResult+] check(ExpectCase<Elem> test) {
         switch (test)
         case (is Boolean()) {
             return [safeApply(test, [])];
         }
-        case (is <Comparison->{Type+}>) {
+        case (is <Comparison->{Elem+}>) {
             value testItems = test.item;
             if (testItems.size < 2) {
                 return ["Error: Must provide at least 2 elements for test comparison"];
             }
-            variable Type prev = testItems.first;
+            variable Elem prev = testItems.first;
             for (elem in testItems.rest) {
                 if (prev <=> elem != test.key) {
                     return ["Failed: ``prev`` is not ``strFor(test.key)`` ``elem``"];
@@ -88,8 +89,8 @@ shared class Expect<Type>({ExpectCase<Type>+} expectations)
         }
     }
 
-    [TestResult+](ExpectCase<Type>) safely([TestResult+](ExpectCase<Type>) test) {
-        function safe(ExpectCase<Type> f) {
+    [TestResult+](ExpectCase<Elem>) safely([TestResult+](ExpectCase<Elem>) test) {
+        function safe(ExpectCase<Elem> f) {
             try {
                 return check(f);
             } catch(e) {
