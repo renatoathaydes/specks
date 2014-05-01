@@ -5,7 +5,9 @@ import ceylon.language.meta.model {
     MutationException
 }
 import ceylon.test {
-    ...
+    test,
+    assertEquals,
+    equalsCompare
 }
 
 import com.athaydes.specks {
@@ -48,10 +50,7 @@ test shared void happySpecificationThatPassesAllTests() {
     assertEquals(specResult.size, 3);
     assertEquals(specResult.collect(({{TestResult*}*} element) => element.size), [2, 4, 1]);
 
-    assertEquals(flatten(specResult), [
-        success, success, success, success, success, success, success,
-    success, success, success, success
-    ]);
+    assert(flatten(specResult).every((TestResult result) => equalsCompare(result, success)));
 }
 
 test shared void expectShouldFailWithExplanationMessage() {

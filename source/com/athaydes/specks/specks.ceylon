@@ -9,7 +9,7 @@ shared alias TestError => String;
 shared alias Success => Null;
 shared alias TestResult => TestError|Success;
 shared alias ExpectCase<Elem> => Boolean()|<Comparison->{Elem+}>;
-shared alias ExpectAllCase<Elem> => <Comparison->{Elem+}>;
+shared alias ExpectAllCase<Where> given Where satisfies [Anything*] => Callable<Boolean, Where>;
 
 shared abstract class NoArgs() of noArgs {}
 object noArgs extends NoArgs() {}
@@ -30,13 +30,10 @@ shared class Specification(
 
 }
 
-TestResult safeApply<Where>(Callable<Boolean|TestError, Where> test, Where where)
+TestResult safeApply<Where>(ExpectAllCase<Where> test, Where where)
         given Where satisfies [Anything*] {
     try {
-        if (is Callable<TestError, Where> test) {
-            return test(*where);
-        }
-        if (is Callable<Boolean, Where> test, test(*where)) {
+        if (test(*where)) {
             return success;
         }
         return (where.empty) then "Failed: condition not met"
@@ -46,18 +43,18 @@ TestResult safeApply<Where>(Callable<Boolean|TestError, Where> test, Where where
     }
 }
 
-shared class ExpectAll<out Where = [Anything*]>({Where+} examples, {Callable<Boolean, Where>+} expectations)
+shared class ExpectAll<out Where = [Anything*]>({Where+} examples, {ExpectAllCase<Where>+} expectations)
         satisfies Block
         given Where satisfies [Anything*] {
 
-    TestResult[] check(Callable<Boolean, Where> test) =>
+    TestResult[] check(ExpectAllCase<Where> test) =>
             examples collect (Where where) => safeApply(test, where);
 
     runTests() => expectations collect check;
 
 }
 
-shared class Expect<Elem>({ExpectCase<Elem>+} expectations)
+shared class Expect<out Elem>({ExpectCase<Elem>+} expectations)
         satisfies Block
         given Elem satisfies Comparable<Elem> {
 
