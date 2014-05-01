@@ -31,6 +31,10 @@ shared void run() {
             examples = { [1, 2], [5, 10], [25, 50] };
             (Integer a, Integer b) => 2 * a == b
         },
+        ExpectAll {
+            examples = { generateIntegers().sequence };
+            (Integer* ints) => sort(ints) == ints
+        },
         ExpectToThrow {
             `Exception`;
             void() { throw; }

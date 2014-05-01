@@ -88,6 +88,17 @@ Every function within the ``ExpectAll`` block will be run with all the examples 
 
 Notice that ``ExpectAll`` is type-safe, so the arguments of the expectation functions must match the types of the examples.
 
+#### Examples generators
+
+You can use generators to provide examples for your tests:
+
+```ceylon
+ExpectAll {
+    examples = { generateIntegers().sequence };
+    (Integer* ints) => sort(ints).sequence == ints
+}
+```
+
 ### ExpectToThrow
 
 Just as important as knowing your code works, is knowing that it fails when it should, in the way it should.
