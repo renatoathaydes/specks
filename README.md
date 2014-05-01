@@ -75,7 +75,16 @@ ExpectAll {
 }
 ```
 
-Every function within the ``ExpectAll`` block will be run with all the examples provided, so running the above example would result in the function ``2 * a == b`` being run with ``a = 1, b = 2``, ``a = 5, b = 10``, and ``a = 25, b = 40``.
+If you wish, you can explicitly "tell" readers of the speck what the first line is (examples):
+
+```ceylon
+ExpectAll {
+    examples = { [1, 2], [5, 10], [25, 50] };
+    (Integer a, Integer b) => 2 * a == b
+}
+```
+
+Every function within the ``ExpectAll`` block will be run with all the examples provided, so running the above example would result in the function ``2 * a == b`` being run with ``a = 1, b = 2``, ``a = 5, b = 10``, and ``a = 25, b = 50``.
 
 Notice that ``ExpectAll`` is type-safe, so the arguments of the expectation functions must match the types of the examples.
 

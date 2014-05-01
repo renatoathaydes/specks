@@ -28,7 +28,7 @@ shared void run() {
             equal -> [2 + 2, 8]
         },
         ExpectAll {
-            { [1, 2], [5, 10], [25, 50] };
+            examples = { [1, 2], [5, 10], [25, 50] };
             (Integer a, Integer b) => 2 * a == b
         },
         ExpectToThrow {
