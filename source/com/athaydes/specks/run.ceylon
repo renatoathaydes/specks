@@ -2,7 +2,7 @@
 "Run the module `com.athaydes.specks`."
 shared void run() {
     [Specification {
-        "Ceylon == operator is transitive";
+        "Ceylon == operator is symmetric";
         ExpectAll {
             { ["a", "a"], ["", ""] };
             (String s1, String s2) => s1 == s2,

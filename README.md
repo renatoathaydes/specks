@@ -10,7 +10,7 @@ For example, here's a simple Specification written with ``specks``:
 
 ```ceylon
     Specification {
-        "Ceylon == operator is transitive";
+        "Ceylon == operator is symmetric";
         ExpectAll {
             { ["a", "a"], ["", ""] };
             (String s1, String s2) => s1 == s2,
