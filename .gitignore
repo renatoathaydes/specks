@@ -1,0 +1,7 @@
+/modules
+/classes
+*.class
+.ceylon
+.project
+.classpath
+.settings
