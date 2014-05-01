@@ -12,7 +12,7 @@ For example, here's a simple Specification written with ``specks``:
     Specification {
         "Ceylon == operator is symmetric";
         ExpectAll {
-            { ["a", "a"], ["", ""] };
+            examples = { ["a", "a"], ["", ""] };
             (String s1, String s2) => s1 == s2,
             (String s1, String s2) => s2 == s1
         }
