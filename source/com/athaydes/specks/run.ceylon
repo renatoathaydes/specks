@@ -3,6 +3,7 @@
 shared void run() {
     [Specification {
         ExpectAll {
+            "== operator should be symmetric";
             { ["a", "a"], ["", ""] };
             (String s1, String s2) => s1 == s2,
             (String s1, String s2) => s2 == s1
@@ -10,35 +11,43 @@ shared void run() {
     },
     Specification {
         Expect {
+            "Ceylon operators to work";
             () => 2 + 2 == 4,
             () => 2 < 4
         },
         Expect {
+            "Ceylon operators to work";
             equal -> [2 + 2, 4],
             smaller -> [2, 4]
         },
         Expect {
+            "Ceylon operators to work";
             () => 2 + 2 == 4,
             equal -> [2 + 2, 4]
         },
         Expect {
+            "Bad expressions to fail";
             () => 2 + 2 == 8,
             equal -> [2 + 2, 8]
         },
         ExpectAll {
+            "More examples";
             examples = { [1, 2], [5, 10], [25, 50] };
             (Integer a, Integer b) => 2 * a == b
         },
         ExpectAll {
+            "Using generated examples";
             examples = { generateIntegers().sequence };
             (Integer* ints) => sort(ints) == ints
         },
         ExpectToThrow {
             `Exception`;
+            "when we call throw";
             void() { throw; }
         }
     }, Specification {
         Expect {
+            "Ceylon [*].first should return either the first element or null for empty Sequences";
             function() {
                 String? first = [].first;
                 return first is Null;
@@ -48,6 +57,7 @@ shared void run() {
             equal -> { [1, 2, 3].first, 1 }
         },
         Expect {
+            "Ceylon [*].first to work with String[]";
             equal -> { ["A"].first, "A" },
             equal -> { ["B", "C", "D"].first, "B" }
         }

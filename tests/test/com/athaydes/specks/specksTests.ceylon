@@ -30,11 +30,13 @@ Boolean throwThis(Exception e) {
 test shared void happySpecificationThatPassesAllTests() {
     value specResult = Specification {
         ExpectAll {
+            "";
             examples = { [2, 4, 6], [0, 0, 0], [-1, 0, -1] };
             (Integer a, Integer b, Integer c) => a + b == c,
             (Integer a, Integer b, Integer c) => b + a == c
         },
         Expect {
+            "";
             () => 2 + 2 == 4,
             equal -> [2 + 2, 4],
             equal -> [5 + 1, 1 + 5, 6],
@@ -42,6 +44,7 @@ test shared void happySpecificationThatPassesAllTests() {
         },
         ExpectToThrow {
             `Exception`;
+            "when throwing this exception";
             () => throwThis(Exception("Bad"))
         }
     }.run();
@@ -60,6 +63,7 @@ test shared void expectShouldFailWithExplanationMessage() {
     }
     value specResult = Specification {
         Expect {
+            "desc";
             larger -> [2 + 1, 4],
             equal -> [1, 2, 3],
             smaller -> [10, 9],
@@ -70,18 +74,19 @@ test shared void expectShouldFailWithExplanationMessage() {
     }.run();
 
     assertEquals(flatten(specResult).map(asString).sequence, [
-        "Failed: 3 is not larger than 4",
-        "Failed: 1 is not equal to 2",
-        "Failed: 10 is not smaller than 9",
+        "Expect 'desc' Failed: 3 is not larger than 4",
+        "Expect 'desc' Failed: 1 is not equal to 2",
+        "Expect 'desc' Failed: 10 is not smaller than 9",
         Exception("Must provide at least 2 elements for test comparison").string,
         Exception().string,
-        "Failed: condition not met"
+        "Expect 'desc' Failed: condition not met"
     ]);
 }
 
 test shared void expectAllShouldFailWithExplanationMessageForFailedExamples() {
     value specResult = Specification {
         ExpectAll {
+            "desc";
             examples = { ["a", "b"], ["c", "d"] };
             (String s1, String s2) => s1 > s2,
             (String s1, String s2) => s1 == s2,
@@ -90,10 +95,10 @@ test shared void expectAllShouldFailWithExplanationMessageForFailedExamples() {
     }.run();
 
     assertEquals(flatten(specResult).map(asString).sequence, [
-        "Failed: [a, b]",
-        "Failed: [c, d]",
-        "Failed: [a, b]",
-        "Failed: [c, d]",
+        "ExpectAll 'desc' Failed: [a, b]",
+        "ExpectAll 'desc' Failed: [c, d]",
+        "ExpectAll 'desc' Failed: [a, b]",
+        "ExpectAll 'desc' Failed: [c, d]",
         "success",
         Exception().string
     ]);
@@ -103,13 +108,14 @@ test shared void expectToThrowShouldFailWithExplanationMessage() {
     value specResult = Specification {
         ExpectToThrow {
             `MutationException`;
+            "when throwing this";
             () => throwThis(Exception("Bad")),
             () => true
         }
     }.run();
 
     assertEquals(flatten(specResult), [
-        "Failed: expected ``type(MutationException(""))`` but threw ``type(Exception())``",
-        "Failed: did not throw any Exception"
+        "ExpectToThrow ``type(MutationException(""))`` 'when throwing this' Failed: threw ``type(Exception())`` instead",
+        "ExpectToThrow ``type(MutationException(""))`` 'when throwing this' Failed: did not throw any Exception"
     ]);
 }

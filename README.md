@@ -13,6 +13,7 @@ testExecutor(`class SpecksTestExecutor`)
 test shared Specification ceylonOperatorIsSymmetric() =>
     Specification {
         ExpectAll {
+            description = "The == operator should be symmetric";
             examples = { ["a", "a"], ["", ""] };
             (String s1, String s2) => s1 == s2,
             (String s1, String s2) => s2 == s1
@@ -42,6 +43,7 @@ Simplest form:
 
 ```ceylon
 Expect {
+    "simple comparisons to work";
     () => 2 + 2 == 4,
     () => 2 < 4
 }
@@ -51,6 +53,7 @@ Using ``Comparison``:
 
 ```ceylon
 Expect {
+    "simple comparisons to work";
     equal -> [2 + 2, 4],
     smaller -> [2, 4]
 }
@@ -62,16 +65,22 @@ For example, this Specification:
 
 ```ceylon
 Expect {
+    "bad comparisons to work!";
     equal -> [2 + 2, 8]
 }
 ```
 
-Would result in a failure with nice error message: ``Failed: 4 is not equal to 8``.
+Would result in a failure with a nicer error message:
+
+```
+Expect 'bad comparisons to work!' Failed: 4 is not equal to 8
+```.
 
 You can combine different kinds of expectations:
 
 ```ceylon
 Expect {
+    "simple comparisons to work";
     () => 2 + 2 == 4,
     equal -> [2 + 2, 4]
 }
@@ -83,6 +92,7 @@ Allows the use of examples, as shown below:
 
 ```ceylon
 ExpectAll {
+    "examples should pass";
     { [1, 2], [5, 10], [25, 50] };
     (Integer a, Integer b) => 2 * a == b
 }
@@ -92,6 +102,7 @@ If you wish, you can explicitly "tell" readers of the speck what the first line 
 
 ```ceylon
 ExpectAll {
+    "examples should pass";
     examples = { [1, 2], [5, 10], [25, 50] };
     (Integer a, Integer b) => 2 * a == b
 }
@@ -107,6 +118,7 @@ You can use generators to provide examples for your tests:
 
 ```ceylon
 ExpectAll {
+    "generated integers to be sorted";
     examples = { generateIntegers().sequence };
     (Integer* ints) => sort(ints).sequence == ints
 }
@@ -121,6 +133,7 @@ For that, you can use ``ExpectToThrow``:
 ```ceylon
 ExpectToThrow {
     `Exception`;
+    "when we call throw";
     void() { throw; }
 }
 ```
@@ -132,6 +145,8 @@ ExpectToThrow {
 shared test Specification firstSpeck() =>
     Specification {
         Expect {
+            "Ceylon [*].first should return either the first element
+             or null for empty Sequences";
             function() {
                 String? first = [].first;
                 return first is Null;
@@ -141,6 +156,7 @@ shared test Specification firstSpeck() =>
             equal -> { [1, 2, 3].first, 1 }
         },
         Expect {
+            "Ceylon [*].first to work with String[]";
             equal -> { ["A"].first, "A" },
             equal -> { ["B", "C", "D"].first, "B" }
         }

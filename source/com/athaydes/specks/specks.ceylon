@@ -27,6 +27,7 @@ shared SpecSuccess success = null;
 
 "Most generic kind of block which forms a [[Specification]]."
 shared interface Block {
+    shared formal String description;
     shared formal {{SpecResult*}*} runTests();
 }
 
@@ -41,6 +42,13 @@ shared class Specification(
      and usually users do not need to call it directly."
     shared {{SpecResult*}*}[] run() => blocks collect results;
 
+}
+
+SpecResult maybePrependFailureMsg(String prefix, SpecResult result) {
+    if (is String result) {
+        return prefix + result;
+    }
+    return result;
 }
 
 SpecResult safeApply<Where>(ExpectAllCase<Where> test, Where where)
@@ -58,6 +66,8 @@ SpecResult safeApply<Where>(ExpectAllCase<Where> test, Where where)
 
 "A kind of Expectation block which includes examples which should be verified."
 shared class ExpectAll<out Where = [Anything*]>(
+    "Description of this expectation."
+    shared actual String description,
     "Examples which will be used to verify expectations.
      Each example will be passed to each expectation function in the order it is declared."
     {Where+} examples,
@@ -67,7 +77,7 @@ shared class ExpectAll<out Where = [Anything*]>(
         given Where satisfies [Anything*] {
 
     SpecResult[] check(ExpectAllCase<Where> test) =>
-            examples collect (Where where) => safeApply(test, where);
+            examples collect (Where where) => maybePrependFailureMsg("ExpectAll '``description``' ", safeApply(test, where));
 
     runTests() => expectations collect check;
 
@@ -75,6 +85,8 @@ shared class ExpectAll<out Where = [Anything*]>(
 
 "Simple kind of Expectation block which accepts expectations of type [[ExpectCase]]"
 shared class Expect<out Elem>(
+    "Description of this expectation."
+    shared actual String description,
     "Expectations which describe how a system should behave."
     {ExpectCase<Elem>+} expectations)
         satisfies Block
@@ -90,7 +102,7 @@ shared class Expect<out Elem>(
     [SpecResult+] check(ExpectCase<Elem> test) {
         switch (test)
         case (is Boolean()) {
-            return [safeApply(test, [])];
+            return [maybePrependFailureMsg("Expect '``description``' ", safeApply(test, []))];
         }
         case (is <Comparison->{Elem+}>) {
             value testItems = test.item;
@@ -100,7 +112,7 @@ shared class Expect<out Elem>(
             variable Elem prev = testItems.first;
             for (elem in testItems.rest) {
                 if (prev <=> elem != test.key) {
-                    return ["Failed: ``prev`` is not ``strFor(test.key)`` ``elem``"];
+                    return ["Expect '``description``' Failed: ``prev`` is not ``strFor(test.key)`` ``elem``"];
                 }
                 prev = elem;
             }
@@ -127,6 +139,8 @@ shared class Expect<out Elem>(
 shared class ExpectToThrow(
     "the exact type of the Exception which should be thrown by the given actions."
     Type<Exception> expectedException,
+    "Description of this expectation."
+    shared actual String description,
     "actions which should cause errors and throw the expected exception."
     {Anything()+} actions)
         satisfies Block {
@@ -134,12 +148,12 @@ shared class ExpectToThrow(
     {SpecResult+} shouldThrow(Anything() action) {
         try {
             action();
-            return { "Failed: did not throw any Exception" };
+            return { "ExpectToThrow ``expectedException`` '``description``' Failed: did not throw any Exception" };
         } catch(e) {
             if (type(e) == expectedException) {
                 return {success};
             } else {
-                return { "Failed: expected ``expectedException`` but threw ``type(e)``" };
+                return { "ExpectToThrow ``expectedException`` '``description``' Failed: threw ``type(e)`` instead" };
             }
         }
     }
