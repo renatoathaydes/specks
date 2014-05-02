@@ -74,7 +74,7 @@ Would result in a failure with a nicer error message:
 
 ```
 Expect 'bad comparisons to work!' Failed: 4 is not equal to 8
-```.
+```
 
 You can combine different kinds of expectations:
 
