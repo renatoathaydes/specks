@@ -21,7 +21,6 @@ shared interface Block {
 }
 
 shared class Specification(
-    String description,
     {Block+} blocks) {
 
     function results(Block block) => block.runTests();

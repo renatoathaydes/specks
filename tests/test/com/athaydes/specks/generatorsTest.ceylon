@@ -22,7 +22,6 @@ Integer average({Integer+} examples) => sum(examples) / examples.size;
 testExecutor(`class SpecksTestExecutor`)
 test shared Specification generatorOfIntegers() =>
     Specification {
-        "Should generate integers spanning nearly the whole range of Integers in Ceylon (limited by JS)";
         ExpectAll {
             examples = { [1], [2], [3], [10], [1_000] };
             (Integer max) => generateIntegers{ count = max; }.size == max,

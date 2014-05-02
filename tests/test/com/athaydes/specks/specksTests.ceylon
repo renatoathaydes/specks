@@ -29,7 +29,6 @@ Boolean throwThis(Exception e) {
 
 test shared void happySpecificationThatPassesAllTests() {
     value specResult = Specification {
-        "Ceylon + operator works for integers";
         ExpectAll {
             examples = { [2, 4, 6], [0, 0, 0], [-1, 0, -1] };
             (Integer a, Integer b, Integer c) => a + b == c,
@@ -60,7 +59,6 @@ test shared void expectShouldFailWithExplanationMessage() {
         throw;
     }
     value specResult = Specification {
-        "All failures";
         Expect {
             larger -> [2 + 1, 4],
             equal -> [1, 2, 3],
@@ -83,7 +81,6 @@ test shared void expectShouldFailWithExplanationMessage() {
 
 test shared void expectAllShouldFailWithExplanationMessageForFailedExamples() {
     value specResult = Specification {
-        "All errors";
         ExpectAll {
             examples = { ["a", "b"], ["c", "d"] };
             (String s1, String s2) => s1 > s2,
@@ -104,7 +101,6 @@ test shared void expectAllShouldFailWithExplanationMessageForFailedExamples() {
 
 test shared void expectToThrowShouldFailWithExplanationMessage() {
     value specResult = Specification {
-        "";
         ExpectToThrow {
             `MutationException`;
             () => throwThis(Exception("Bad")),

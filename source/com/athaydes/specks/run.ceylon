@@ -2,7 +2,6 @@
 "Run the module `com.athaydes.specks`."
 shared void run() {
     [Specification {
-        "Ceylon == operator is symmetric";
         ExpectAll {
             { ["a", "a"], ["", ""] };
             (String s1, String s2) => s1 == s2,
@@ -10,7 +9,6 @@ shared void run() {
         }
     },
     Specification {
-        "Some examples";
         Expect {
             () => 2 + 2 == 4,
             () => 2 < 4
@@ -40,7 +38,6 @@ shared void run() {
             void() { throw; }
         }
     }, Specification {
-        "Ceylon [*].first Speck";
         Expect {
             function() {
                 String? first = [].first;
