@@ -128,21 +128,22 @@ ExpectToThrow {
 ### More examples
 
 ```ceylon
-Specification {
-    "Ceylon [*].first Speck";
-    Expect {
-        function() {
-            String? first = [].first;
-            return first is Null;
+"Ceylon [*].first Speck"
+shared test Specification firstSpeck() =>
+    Specification {
+        Expect {
+            function() {
+                String? first = [].first;
+                return first is Null;
+            },
+            equal -> { [1].first, 1 },
+            equal -> { [5, 4, 3, 2, 1, 0].first, 5 },
+            equal -> { [1, 2, 3].first, 1 }
         },
-        equal -> { [1].first, 1 },
-        equal -> { [5, 4, 3, 2, 1, 0].first, 5 },
-        equal -> { [1, 2, 3].first, 1 }
-    },
-    Expect {
-        equal -> { ["A"].first, "A" },
-        equal -> { ["B", "C", "D"].first, "B" }
+        Expect {
+            equal -> { ["A"].first, "A" },
+            equal -> { ["B", "C", "D"].first, "B" }
+        }
     }
-}
 ```
 
