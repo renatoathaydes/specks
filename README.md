@@ -4,7 +4,7 @@ Specks enables a different way to check that your Ceylon code works.
 
 Instead of writing traditional tests, you write specifications.
 
-The main difference is the focus: specifications focus on behaviour, while unit tests focus on outcomes.
+The main difference is the focus: specifications focus on behaviour and outcomes, while unit tests focus on interactions and, most of the time, implementation details.
 
 For example, here's a simple Specification written with ``specks``:
 
@@ -20,6 +20,29 @@ test shared Specification ceylonOperatorIsSymmetric() =>
         }
     };
 ```
+
+Notice that if the first expectation function (``s1 == s2``) failed, the next would run anyway, so you would know exactly which cases pass and which fail.
+
+Contrast that with your normal unit test:
+
+```ceylon
+void commonUnitTest() {
+    value s1 = "a";
+    value s2 = "a";
+    value s3 = "";
+    value s4 = "";
+    assertEquals(s1, s2);
+    assertEquals(s2, s1);
+    assertEquals(s3, s4);
+    assertEquals(s4, s3);
+}
+```
+
+If the first assertion fails, you have no way of knowing whether the next ones actually pass or not.
+
+Now imagine the usual real-world scenario when you invariably have many examples you need to test, and on each example you might have many "assertions" to make, and you can see that this just doesn't scale.
+
+With ``specks``, the number of examples you need to test doesn't make any difference on how you write your tests. Just declare the examples by hand as shown in the first example above, or create a **examples generator** function (or use one provided by ``specks``), and your expectation functions will be run against **all** of them, whether some fail or not.
 
 ## Running tests with specks
 
