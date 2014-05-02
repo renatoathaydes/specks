@@ -5,9 +5,9 @@ import ceylon.language.meta.model {
     Type
 }
 
-shared alias TestError => String;
-shared alias Success => Null;
-shared alias TestResult => TestError|Success;
+shared alias SpecFailure => String|Exception;
+shared alias SpecSuccess => Null;
+shared alias SpecResult => SpecFailure|SpecSuccess;
 shared alias ExpectCase<Elem> => Boolean()|<Comparison->{Elem+}>;
 shared alias ExpectAllCase<Where> given Where satisfies [Anything*] => Callable<Boolean, Where>;
 
@@ -17,7 +17,7 @@ object noArgs extends NoArgs() {}
 shared Null success = null;
 
 shared interface Block {
-    shared formal {{TestResult*}*} runTests();
+    shared formal {{SpecResult*}*} runTests();
 }
 
 shared class Specification(
@@ -26,11 +26,11 @@ shared class Specification(
 
     function results(Block block) => block.runTests();
 
-    shared {{TestResult*}*}[] run() => blocks collect results;
+    shared {{SpecResult*}*}[] run() => blocks collect results;
 
 }
 
-TestResult safeApply<Where>(ExpectAllCase<Where> test, Where where)
+SpecResult safeApply<Where>(ExpectAllCase<Where> test, Where where)
         given Where satisfies [Anything*] {
     try {
         if (test(*where)) {
@@ -39,7 +39,7 @@ TestResult safeApply<Where>(ExpectAllCase<Where> test, Where where)
         return (where.empty) then "Failed: condition not met"
         else "Failed: ``where``";
     } catch(e) {
-        return "Error: ``e``";
+        return e;
     }
 }
 
@@ -47,7 +47,7 @@ shared class ExpectAll<out Where = [Anything*]>({Where+} examples, {ExpectAllCas
         satisfies Block
         given Where satisfies [Anything*] {
 
-    TestResult[] check(ExpectAllCase<Where> test) =>
+    SpecResult[] check(ExpectAllCase<Where> test) =>
             examples collect (Where where) => safeApply(test, where);
 
     runTests() => expectations collect check;
@@ -65,7 +65,7 @@ shared class Expect<out Elem>({ExpectCase<Elem>+} expectations)
         case (smaller) { return "smaller than"; }
     }
 
-    [TestResult+] check(ExpectCase<Elem> test) {
+    [SpecResult+] check(ExpectCase<Elem> test) {
         switch (test)
         case (is Boolean()) {
             return [safeApply(test, [])];
@@ -73,7 +73,7 @@ shared class Expect<out Elem>({ExpectCase<Elem>+} expectations)
         case (is <Comparison->{Elem+}>) {
             value testItems = test.item;
             if (testItems.size < 2) {
-                return ["Error: Must provide at least 2 elements for test comparison"];
+                return [Exception("Must provide at least 2 elements for test comparison")];
             }
             variable Elem prev = testItems.first;
             for (elem in testItems.rest) {
@@ -86,12 +86,12 @@ shared class Expect<out Elem>({ExpectCase<Elem>+} expectations)
         }
     }
 
-    [TestResult+](ExpectCase<Elem>) safely([TestResult+](ExpectCase<Elem>) test) {
+    [SpecResult+](ExpectCase<Elem>) safely([SpecResult+](ExpectCase<Elem>) test) {
         function safe(ExpectCase<Elem> f) {
             try {
                 return check(f);
             } catch(e) {
-                return ["Error: ``e``"];
+                return [e];
             }
         }
         return safe;
@@ -104,7 +104,7 @@ shared class Expect<out Elem>({ExpectCase<Elem>+} expectations)
 shared class ExpectToThrow(Type<Exception> expectedException, {Anything()+} actions)
         satisfies Block {
 
-    {TestResult+} shouldThrow(Anything() action) {
+    {SpecResult+} shouldThrow(Anything() action) {
         try {
             action();
             return { "Failed: did not throw any Exception" };

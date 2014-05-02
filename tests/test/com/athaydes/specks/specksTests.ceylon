@@ -15,13 +15,13 @@ import com.athaydes.specks {
     ExpectAll,
     Specification,
     Expect,
-    TestResult,
+    SpecResult,
     success
 }
 
 
-[TestResult*] flatten({{TestResult*}*}[] specResult) =>
-        [for (res in specResult) for (row in res) for (col in row) col];
+[SpecResult*] flatten({{SpecResult*}*}[] specResult) =>
+        [ for (res in specResult) for (row in res) for (col in row) col ];
 
 Boolean throwThis(Exception e) {
     throw e;
@@ -48,17 +48,19 @@ test shared void happySpecificationThatPassesAllTests() {
     }.run();
 
     assertEquals(specResult.size, 3);
-    assertEquals(specResult.collect(({{TestResult*}*} element) => element.size), [2, 4, 1]);
+    assertEquals(specResult.collect(({{SpecResult*}*} element) => element.size), [2, 4, 1]);
 
-    assert(flatten(specResult).every((TestResult result) => equalsCompare(result, success)));
+    assert(flatten(specResult).every((SpecResult result) => equalsCompare(result, success)));
 }
+
+String asString(SpecResult result) => result?.string else "success";
 
 test shared void expectShouldFailWithExplanationMessage() {
     Integer error() {
         throw;
     }
     value specResult = Specification {
-        "All errors";
+        "All failures";
         Expect {
             larger -> [2 + 1, 4],
             equal -> [1, 2, 3],
@@ -69,13 +71,13 @@ test shared void expectShouldFailWithExplanationMessage() {
         }
     }.run();
 
-    assertEquals(flatten(specResult), [
+    assertEquals(flatten(specResult).map(asString).sequence, [
         "Failed: 3 is not larger than 4",
-    "Failed: 1 is not equal to 2",
-    "Failed: 10 is not smaller than 9",
-    "Error: Must provide at least 2 elements for test comparison",
-    "Error: ``Exception()``",
-    "Failed: condition not met"
+        "Failed: 1 is not equal to 2",
+        "Failed: 10 is not smaller than 9",
+        Exception("Must provide at least 2 elements for test comparison").string,
+        Exception().string,
+        "Failed: condition not met"
     ]);
 }
 
@@ -90,13 +92,13 @@ test shared void expectAllShouldFailWithExplanationMessageForFailedExamples() {
         }
     }.run();
 
-    assertEquals(flatten(specResult), [
+    assertEquals(flatten(specResult).map(asString).sequence, [
         "Failed: [a, b]",
-    "Failed: [c, d]",
-    "Failed: [a, b]",
-    "Failed: [c, d]",
-    success,
-    "Error: ``Exception()``"
+        "Failed: [c, d]",
+        "Failed: [a, b]",
+        "Failed: [c, d]",
+        "success",
+        Exception().string
     ]);
 }
 
@@ -112,6 +114,6 @@ test shared void expectToThrowShouldFailWithExplanationMessage() {
 
     assertEquals(flatten(specResult), [
         "Failed: expected ``type(MutationException(""))`` but threw ``type(Exception())``",
-    "Failed: did not throw any Exception"
+        "Failed: did not throw any Exception"
     ]);
 }
