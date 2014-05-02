@@ -33,4 +33,3 @@ test shared Specification generatorOfIntegers() =>
             (Integer* ints) => sort(ints) == ints
         }
     };
-

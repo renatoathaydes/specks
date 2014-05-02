@@ -23,7 +23,8 @@ import ceylon.test {
     error,
     AfterTestAnnotation,
     ignored,
-    failure
+    failure,
+    testExecutor
 }
 import ceylon.test.event {
     TestStartEvent,
@@ -32,8 +33,20 @@ import ceylon.test.event {
     TestErrorEvent
 }
 
+"""**specks** test executor. To run your [[Specification]]s using Ceylon's test framework, annotate your
+   top-level functions, classes, packages or your whole module with the [[testExecutor]] annotation.
 
+   For example, to annotate a single test:
+
+       testExecutor(`class SpecksTestExecutor`)
+       test shared Specification mySpeck() => Specification {
+           ...
+       };"""
+see(`interface TestExecutor`, `function testExecutor`)
 shared class SpecksTestExecutor(FunctionDeclaration funcDecl, ClassDeclaration? classDecl) satisfies TestExecutor {
+
+    // TODO most of this class is copied from ceylon.test.DefaultTestExecutor, but as this class is not shared we can't
+    // subclass it. Should change this when that becomes possible.
 
     variable Object? instance = null;
 
