@@ -77,7 +77,7 @@ test shared void expectShouldFailWithExplanationMessage() {
         "Expect 'desc' Failed: 3 is not larger than 4",
         "Expect 'desc' Failed: 1 is not equal to 2",
         "Expect 'desc' Failed: 10 is not smaller than 9",
-        Exception("Must provide at least 2 elements for test comparison").string,
+        Exception("Expect 'desc': ExpectCase [0] should contain at least 2 elements").string,
         Exception().string,
         "Expect 'desc' Failed: condition not met"
     ]);

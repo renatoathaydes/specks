@@ -107,7 +107,7 @@ shared class Expect<out Elem>(
         case (is <Comparison->{Elem+}>) {
             value testItems = test.item;
             if (testItems.size < 2) {
-                return [Exception("Must provide at least 2 elements for test comparison")];
+                return [Exception("Expect '``description``': ExpectCase ``testItems`` should contain at least 2 elements")];
             }
             variable Elem prev = testItems.first;
             for (elem in testItems.rest) {
