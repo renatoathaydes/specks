@@ -9,8 +9,9 @@ The main difference is the focus: specifications focus on behaviour, while unit 
 For example, here's a simple Specification written with ``specks``:
 
 ```ceylon
+testExecutor(`class SpecksTestExecutor`)
+test shared Specification ceylonOperatorIsSymmetric() =>
     Specification {
-        "Ceylon == operator is symmetric";
         ExpectAll {
             examples = { ["a", "a"], ["", ""] };
             (String s1, String s2) => s1 == s2,
@@ -18,6 +19,18 @@ For example, here's a simple Specification written with ``specks``:
         }
     };
 ```
+
+## Running tests with specks
+
+To run a Specification using Ceylon's testing framework, you just need to annotate your function/class/package/module with the ``testExecutor`` annotation so the test will be run using the ``SpecksTestExecutor``:
+
+```ceylon
+testExecutor(`class SpecksTestExecutor`)
+shared package my.package;
+```
+
+> Notice that testExecutor support started with Ceylon 1.1.0, so you can't use this with 1.0
+
 
 ## All about Expectations
 

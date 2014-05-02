@@ -1,12 +1,13 @@
 import ceylon.test {
-    test
+    test,
+    testExecutor
 }
 
 import com.athaydes.specks {
     Specification,
     generateIntegers,
     ExpectAll,
-    Success
+    SpecksTestExecutor
 }
 
 void run() {
@@ -18,8 +19,9 @@ Integer[] countEachUnique({Integer*} examples) => examples.collect((Integer e1) 
 
 Integer average({Integer+} examples) => sum(examples) / examples.size;
 
-test shared void generatorOfIntegers() {
-    value result = Specification {
+testExecutor(`class SpecksTestExecutor`)
+test shared Specification generatorOfIntegers() =>
+    Specification {
         "Should generate integers spanning nearly the whole range of Integers in Ceylon (limited by JS)";
         ExpectAll {
             examples = { [1], [2], [3], [10], [1_000] };
@@ -31,8 +33,5 @@ test shared void generatorOfIntegers() {
             examples = { generateIntegers().sequence };
             (Integer* ints) => sort(ints) == ints
         }
+    };
 
-    }.run();
-    print(result);
-    assert(flatten(result).every((Anything result) => result is Success));
-}
