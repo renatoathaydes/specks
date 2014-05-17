@@ -1,6 +1,3 @@
-import ceylon.language.meta {
-    type
-}
 import ceylon.language.meta.model {
     MutationException
 }
@@ -113,9 +110,8 @@ test shared void expectToThrowShouldFailWithExplanationMessage() {
             () => true
         }
     }.run();
-
-    assertEquals(flatten(specResult), [
-        "ExpectToThrow ``type(MutationException(""))`` 'when throwing this' Failed: threw ``type(Exception())`` instead",
-        "ExpectToThrow ``type(MutationException(""))`` 'when throwing this' Failed: did not throw any Exception"
-    ]);
+    
+    value errors = flatten(specResult);
+    assertEquals(errors[0], "ExpectToThrow `` `MutationException` `` 'when throwing this' Failed: threw ``className(Exception())`` instead");
+    assertEquals(errors[1], "ExpectToThrow `` `MutationException` `` 'when throwing this' Failed: did not throw any Exception");
 }

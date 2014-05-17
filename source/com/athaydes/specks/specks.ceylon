@@ -1,6 +1,3 @@
-import ceylon.language.meta {
-    type
-}
 import ceylon.language.meta.model {
     Type
 }
@@ -145,15 +142,21 @@ shared class ExpectToThrow(
     {Anything()+} actions)
         satisfies Block {
 
+    function platformIndependentName(Object name) =>
+        name.string.replace("::", ".");
+
     {SpecResult+} shouldThrow(Anything() action) {
         try {
             action();
-            return { "ExpectToThrow ``expectedException`` '``description``' Failed: did not throw any Exception" };
+            return { "ExpectToThrow ``expectedException`` '``description``' " +
+                     "Failed: did not throw any Exception" };
         } catch(e) {
-            if (type(e) == expectedException) {
+            value exceptionClass = className(e);
+            if (platformIndependentName(exceptionClass) == platformIndependentName(expectedException)) {
                 return {success};
             } else {
-                return { "ExpectToThrow ``expectedException`` '``description``' Failed: threw ``type(e)`` instead" };
+                return { "ExpectToThrow ``expectedException`` '``description``' " +
+                         "Failed: threw ``className(e)`` instead" };
             }
         }
     }
