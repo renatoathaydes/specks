@@ -33,22 +33,29 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
     }
 
     void invokeFunction(FunctionDeclaration f, Object?() instance) {
-        if (f.toplevel) {
-            value spec = f.invoke();
-            assert(is Specification spec);
-            value result = spec.run();
-            value allResults = [ for (a in result) for (b in a) for (c in b) c ];
-            value failures = [ for (specResult in allResults) if (is SpecFailure specResult) specResult];
-            if (!failures.empty) {
-                value errors = [ for (failure in failures) if (is Exception failure) failure ];
-                if (!errors is Empty) {
-                    throw Exception(failures.string);
-                }
-                throw AssertionError(failures.string);
-            }
-        } else {
+        function invokeMemberFunction() {
             assert(exists i = instance());
-            f.memberInvoke(i);
+            value res = f.memberInvoke(i);
+            assert(is Specification res);
+            return res;
+        }
+        function invokeTopFunction() {
+            value res = f.invoke();
+            assert(is Specification res);
+            return res;
+        }
+        
+        value spec = f.toplevel then invokeTopFunction() else invokeMemberFunction();
+        value result = spec.run();
+        value allResults = [ for (a in result) for (b in a) for (c in b) c ];
+        value failures = [ for (specResult in allResults) if (is SpecFailure specResult) specResult];
+        
+        if (!failures.empty) {
+            value errors = [ for (failure in failures) if (is Exception failure) failure ];
+            if (!errors is Empty) {
+                throw Exception(failures.string);
+            }
+            throw AssertionError(failures.string);
         }
     }
     
