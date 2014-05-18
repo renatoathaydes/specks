@@ -32,16 +32,13 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
         }
     }
 
-    void invokeFunction(FunctionDeclaration f, Object?() instance) {
+    void invokeFunction(FunctionDeclaration f, Object? instance)() {
         function invokeMemberFunction() {
-            assert(exists i = instance());
-            value res = f.memberInvoke(i);
-            assert(is Specification res);
+            assert(exists i = instance, is Specification res = f.memberInvoke(i));
             return res;
         }
         function invokeTopFunction() {
-            value res = f.invoke();
-            assert(is Specification res);
+            assert(is Specification res = f.invoke());
             return res;
         }
         
@@ -52,15 +49,14 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
         
         if (!failures.empty) {
             value errors = [ for (failure in failures) if (is Exception failure) failure ];
-            if (!errors is Empty) {
+            if (!errors.empty) {
                 throw Exception(failures.string);
             }
             throw AssertionError(failures.string);
         }
     }
     
-    shared actual Anything() handleTestInvocation(TestRunContext context, Object?() instance) {
-        return () => invokeFunction(functionDeclaration, instance);
-    }
+    shared actual Anything() handleTestInvocation(TestRunContext context, Object? instance) =>
+        invokeFunction(functionDeclaration, instance);
 
 }
