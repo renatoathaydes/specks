@@ -13,6 +13,7 @@ import com.athaydes.specks {
     Specification,
     Expect,
     SpecResult,
+    ExpectAllToThrow,
     success
 }
 
@@ -43,11 +44,16 @@ test shared void happySpecificationThatPassesAllTests() {
             `Exception`;
             "when throwing this exception";
             () => throwThis(Exception("Bad"))
+        },
+        ExpectAllToThrow {
+            `Exception`;
+            "happy path";
+            {[1], [2]};
+            (Integer i) => throwThis(Exception("Bad"))
         }
     }.run();
-
-    assertEquals(specResult.size, 3);
-    assertEquals(specResult.collect(({{SpecResult*}*} element) => element.size), [2, 4, 1]);
+    assertEquals(specResult.size, 4);
+    assertEquals(specResult.collect(({{SpecResult*}*} element) => element.size), [2, 4, 1, 1]);
 
     assert(flatten(specResult).every((SpecResult result) => equalsCompare(result, success)));
 }
@@ -114,4 +120,22 @@ test shared void expectToThrowShouldFailWithExplanationMessage() {
     value errors = flatten(specResult);
     assertEquals(errors[0], "ExpectToThrow `` `MutationException` `` 'when throwing this' Failed: threw ``className(Exception())`` instead");
     assertEquals(errors[1], "ExpectToThrow `` `MutationException` `` 'when throwing this' Failed: did not throw any Exception");
+}
+
+test shared void expectAllToThrowShouldFailWithExplanationMessageForEachExample() {
+    value specResult = Specification {
+        ExpectAllToThrow {
+            `MutationException`;
+            "when throwing this";
+            { [1, 2], [3, 4] };
+            (Integer i, Integer j) => throwThis(Exception("Bad")),
+            (Integer i, Integer j) => true
+        }
+    }.run();
+    
+    value errors = flatten(specResult);
+    assertEquals(errors[0], "ExpectAllToThrow `` `MutationException` `` 'when throwing this' Failed on [1, 2]: threw ``className(Exception())`` instead");
+    assertEquals(errors[1], "ExpectAllToThrow `` `MutationException` `` 'when throwing this' Failed on [3, 4]: threw ``className(Exception())`` instead");
+    assertEquals(errors[2], "ExpectAllToThrow `` `MutationException` `` 'when throwing this' Failed on [1, 2]: did not throw any Exception");
+    assertEquals(errors[3], "ExpectAllToThrow `` `MutationException` `` 'when throwing this' Failed on [3, 4]: did not throw any Exception");
 }

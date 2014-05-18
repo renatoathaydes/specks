@@ -7,11 +7,12 @@ import com.athaydes.specks {
     Specification,
     generateIntegers,
     ExpectAll,
-    SpecksTestExecutor
+    SpecksTestExecutor,
+    ExpectAllToThrow
 }
 
 void run() {
-    generatorOfIntegers();
+    print(generatorOfIntegers().run());
 }
 
 
@@ -25,14 +26,20 @@ test shared Specification generatorOfIntegers() =>
         ExpectAll {
             "Should generate integers array of expected size, each array should be unique,
              and the average of the generated integers should be close to 0";
-            examples = { [1], [2], [3], [10], [1_000] };
+            examples = { [1], [3], [4], [10], [100] };
             (Integer max) => generateIntegers{ count = max; }.size == max,
-            (Integer max) => countEachUnique(generateIntegers{ count = max; }).filter((Integer count) => count > 1).empty,
+            (Integer max) => countEachUnique(generateIntegers{ count = max; }).select((Integer count) => count > 1).empty,
             (Integer max) => -10 < average(generateIntegers(max)) < 10
         },
         ExpectAll {
             "Generated integers to be sorted";
             examples = { generateIntegers().sequence };
             (Integer* ints) => sort(ints) == ints
+        },
+        ExpectAllToThrow {
+            `Exception`;
+            "When generator is asked to create a non-positive number of examples";
+            examples = { [0], [-1], [-2], [-50] };
+            (Integer max) => generateIntegers { count = max; }.sequence
         }
     };

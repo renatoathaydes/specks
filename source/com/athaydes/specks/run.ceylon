@@ -1,7 +1,14 @@
 
 
+
 "Run the module `com.athaydes.specks`."
 shared void run() {
+    void myFunction(Integer i, Integer j) {
+        if (i <= 0 || j <= 0) {
+            throw Exception();
+        }
+    }
+    
     [Specification {
         ExpectAll {
             "== operator should be symmetric";
@@ -45,6 +52,17 @@ shared void run() {
             `Exception`;
             "when we call throw";
             void() { throw; }
+        },
+        ExpectAllToThrow {
+            `Exception`;
+            "when not given at least one positive integer";
+            { [-4, 0], [0, -1], [-2, -3], [0, 0] };
+            myFunction,
+            void(Integer i, Integer j) {
+                if (i <= 0 || j <= 0) {
+                    throw Exception("Not given a positive integer");
+                }
+            }
         }
     }, Specification {
         Expect {
@@ -64,4 +82,5 @@ shared void run() {
         }
     }
     ].collect((Specification speck) => print(speck.run()));
+    
 }

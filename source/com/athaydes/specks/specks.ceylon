@@ -19,6 +19,9 @@ shared alias ExpectCase<Elem> => Boolean()|<Comparison->{Elem+}>;
 "Cases of [[ExpectAll]] block's expectations."
 shared alias ExpectAllCase<Where> given Where satisfies [Anything*] => Callable<Boolean, Where>;
 
+"Cases of [[ExpectAllToThrow]] block's expectations."
+shared alias ExpectAllToThrowCase<Where> given Where satisfies [Anything*] => Callable<Anything, Where>;
+
 "The result of running a Specification which is successful."
 shared SpecSuccess success = null;
 
@@ -74,7 +77,8 @@ shared class ExpectAll<out Where = [Anything*]>(
         given Where satisfies [Anything*] {
 
     SpecResult[] check(ExpectAllCase<Where> test) =>
-            examples collect (Where where) => maybePrependFailureMsg("ExpectAll '``description``' ", safeApply(test, where));
+            examples collect (Where where) =>
+                maybePrependFailureMsg("ExpectAll '``description``' ", safeApply(test, where));
 
     runTests() => expectations collect check;
 
@@ -132,6 +136,28 @@ shared class Expect<out Elem>(
 
 }
 
+String platformIndependentName(Object name) =>
+        name.string.replace("::", ".");
+
+
+{SpecResult*} shouldThrow(Type<Exception> expectedException, String(Exception?) errorDescriber)
+                         ({Anything()*} actions) {
+    SpecResult runAction(Anything() action) {
+        try {
+            action();
+            return errorDescriber(null);
+        } catch(e) {
+            value exceptionClass = className(e);
+            if (platformIndependentName(exceptionClass) == platformIndependentName(expectedException)) {
+                return success;
+            } else {
+                return errorDescriber(e);
+            }
+        }
+    }
+    return { for (action in actions) runAction(action) };
+}
+
 "A kind of Expectation block which can be used to verify that errors are handled correctly."
 shared class ExpectToThrow(
     "the exact type of the Exception which should be thrown by the given actions."
@@ -141,26 +167,67 @@ shared class ExpectToThrow(
     "actions which should cause errors and throw the expected exception."
     {Anything()+} actions)
         satisfies Block {
-
-    function platformIndependentName(Object name) =>
-        name.string.replace("::", ".");
-
-    {SpecResult+} shouldThrow(Anything() action) {
-        try {
-            action();
-            return { "ExpectToThrow ``expectedException`` '``description``' " +
-                     "Failed: did not throw any Exception" };
-        } catch(e) {
-            value exceptionClass = className(e);
-            if (platformIndependentName(exceptionClass) == platformIndependentName(expectedException)) {
-                return {success};
-            } else {
-                return { "ExpectToThrow ``expectedException`` '``description``' " +
-                         "Failed: threw ``className(e)`` instead" };
-            }
+    
+    String describeError(Exception? actualException) {
+        switch (actualException)
+        case (is Null) {
+            return "ExpectToThrow ``expectedException`` '``description``' " +
+                    "Failed: did not throw any Exception";
+        }
+        case (is Exception) {
+            return "ExpectToThrow ``expectedException`` '``description``' " +
+                "Failed: threw ``className(actualException)`` instead";
         }
     }
 
-    runTests() => actions collect shouldThrow;
+    runTests() => actions.map((Anything() action) => { action }) collect shouldThrow(expectedException, describeError);
 
+}
+
+"A kind of Expectation block which can be used to verify that errors are handled correctly for each example provided."
+shared class ExpectAllToThrow<out Where = [Anything*]>(
+    "the exact type of the Exception which should be thrown by the given actions."
+    Type<Exception> expectedException,
+    "Description of this expectation."
+    shared actual String description,
+    "Examples which will be used to verify expectations.
+     Each example will be passed to each expectation function in the order it is declared."
+    {Where+} examples,
+    "actions which should cause errors and throw the expected exception."
+    {ExpectAllToThrowCase<Where>+} expectations)
+        satisfies Block
+        given Where satisfies [Anything*] {
+    
+    variable Where? currentExample = null;
+    
+    function currentExampleString() {
+        assert (exists ce = currentExample);
+        return "on ``ce``";
+    }
+    
+    String describeError(Exception? actualException) {
+        switch (actualException)
+        case (is Null) {
+            return "ExpectAllToThrow ``expectedException`` '``description``' " +
+                    "Failed ``currentExampleString()``: did not throw any Exception";
+        }
+        case (is Exception) {
+            return "ExpectAllToThrow ``expectedException`` '``description``' " +
+                    "Failed ``currentExampleString()``: threw ``className(actualException)`` instead";
+        }
+    }
+    
+    {Anything()*} forEachExample {
+        function checkExpectation(ExpectAllToThrowCase<Where> expect, Where example)() {
+            currentExample = example;
+            return expect(*example);
+        }
+        return { for (expect in expectations) for (example in examples) checkExpectation(expect, example) };
+    }
+    
+    SpecResult[] check(ExpectAllToThrowCase<Where> test) =>
+        shouldThrow(expectedException, describeError)(forEachExample).sequence;
+    
+    runTests() => expectations collect check;
+    
 }

@@ -161,6 +161,25 @@ ExpectToThrow {
 }
 ```
 
+### ExpectAllToThrow
+
+Finally, we have the version of ``ExpectToThrow`` which accepts examples:
+
+```ceylon
+ExpectAllToThrow {
+    `MyException`;
+    "when not given at least one positive integer";
+    { [-4, 0], [0, -1], [-2, -3], [0, 0] };
+    myFunction, // a function declared elsewhere that takes 2 Integers as arguments
+    void needsOnePositiveInteger(Integer i, Integer j) {
+        if (i <= 0 || j <= 0) {
+            throw MyException("Not given a positive integer");
+        }
+    }
+}
+```
+
+
 ### More examples
 
 ```ceylon
