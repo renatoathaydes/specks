@@ -7,19 +7,21 @@
 throws(`class Exception`, "if count is smaller than 1")
 shared {Integer+} generateIntegers(
     "the number of integers to generate - must be positive"
-    Integer count = 100) {
+    Integer count = 100,
+    "the lower bound, or lowest value that should be generated"
+    Integer lowerBound = - 1M,
+    "the higher bound, or maximum value that should be generated"
+    Integer higherBound = 1M) {
     if (count < 1) {
         throw Exception("Count must be positive");
     }
     if (count == 1) { return { 0 }; }
     
     class IntsIterator(Integer count) satisfies {Integer+} {
-        value first = -9M;
-        value last = 9M;
-        value step = (last - first) / (count - 1);
+        value step = (higherBound - lowerBound) / (count - 1);
         
         variable Integer itemsLeft = count;
-        variable Integer current = first;
+        variable Integer current = lowerBound;
         
         Integer|Finished increase() {
             if (itemsLeft == 0) {

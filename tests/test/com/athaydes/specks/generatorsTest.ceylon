@@ -16,7 +16,7 @@ void run() {
 }
 
 
-Integer[] countEachUnique({Integer*} examples) => examples.collect((Integer e1) => examples.count((Integer e2) => e2 == e1));
+Integer[] countEachUnique({Integer*} examples) => examples.collect((e1) => examples.count((e2) => e2 == e1));
 
 Integer average({Integer+} examples) => sum(examples) / examples.size;
 
@@ -28,7 +28,7 @@ test shared Specification generatorOfIntegers() =>
              and the average of the generated integers should be close to 0";
             examples = { [1], [3], [4], [10], [100] };
             (Integer max) => generateIntegers{ count = max; }.size == max,
-            (Integer max) => countEachUnique(generateIntegers{ count = max; }).select((Integer count) => count > 1).empty,
+            (Integer max) => countEachUnique(generateIntegers{ count = max; }).select((count) => count > 1).empty,
             (Integer max) => -10 < average(generateIntegers(max)) < 10
         },
         ExpectAll {
@@ -36,10 +36,18 @@ test shared Specification generatorOfIntegers() =>
             examples = { generateIntegers().sequence() };
             (Integer* ints) => sort(ints) == ints
         },
+        ExpectAll {
+            "Generated integers to be within bounds";
+            examples = { [0, 10], [-10, 10], [-105, 543] };
+            function (Integer low, Integer high) {
+                value ints = generateIntegers { count = 4; lowerBound = low; higherBound = high; };
+                return ints.first == low && ints.last == high;
+            }
+        },
         ExpectAllToThrow {
             `Exception`;
             "When generator is asked to create a non-positive number of examples";
             examples = { [0], [-1], [-2], [-50] };
-            (Integer max) => generateIntegers { count = max; }.sequence
+            (Integer max) => generateIntegers { count = max; }.sequence()
         }
     };
