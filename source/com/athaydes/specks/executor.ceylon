@@ -25,7 +25,6 @@ see(`interface TestExecutor`, `function testExecutor`)
 shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDeclaration? classDeclaration)
         extends DefaultTestExecutor(functionDeclaration, classDeclaration) {
 
- 
     shared actual void verifyFunctionReturnType() {
         if(is OpenClassOrInterfaceType openType = functionDeclaration.openType, openType.declaration != `class Specification`) {
             throw Exception("function ``functionDeclaration.qualifiedName`` should return Specification");
@@ -56,7 +55,8 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
         }
     }
     
-    handleTestInvocation(TestRunContext context, Object? instance)() =>
-        invokeFunction(functionDeclaration, instance);
+    shared actual void handleTestInvocation(TestRunContext context, Object? instance)() {
+        invokeFunction(functionDeclaration, instance)();
+    }
 
 }
