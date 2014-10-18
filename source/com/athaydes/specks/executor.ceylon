@@ -56,7 +56,7 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
         }
     }
     
-    shared actual Anything() handleTestInvocation(TestRunContext context, Object? instance) =>
+    handleTestInvocation(TestRunContext context, Object? instance)() =>
         invokeFunction(functionDeclaration, instance);
 
 }

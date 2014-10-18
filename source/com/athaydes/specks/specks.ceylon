@@ -10,7 +10,7 @@ shared alias SpecFailure => String|Exception;
 "Successfull Specification"
 shared alias SpecSuccess => Null;
 
-"The result of runnin a Specification."
+"The result of running a Specification."
 shared alias SpecResult => SpecFailure|SpecSuccess;
 
 "Cases of [[Expect]] block's expectations."
@@ -40,7 +40,7 @@ shared class Specification(
 
     "Run this [[Specification]]. This method is called by **specks** to run this Specification
      and usually users do not need to call it directly."
-    shared {{SpecResult*}*}[] run() => blocks collect results;
+    shared {{SpecResult*}*}[] run() => blocks.collect(results);
 
 }
 
@@ -77,10 +77,10 @@ shared class ExpectAll<out Where = [Anything*]>(
         given Where satisfies [Anything*] {
 
     SpecResult[] check(ExpectAllCase<Where> test) =>
-            examples collect (Where where) =>
-                maybePrependFailureMsg("ExpectAll '``description``' ", safeApply(test, where));
+            examples.collect((Where where) =>
+                maybePrependFailureMsg("ExpectAll '``description``' ", safeApply(test, where)));
 
-    runTests() => expectations collect check;
+    runTests() => expectations.collect(check);
 
 }
 
@@ -132,7 +132,7 @@ shared class Expect<out Elem>(
         return safe;
     }
 
-    runTests() => expectations collect safely(check);
+    runTests() => expectations.collect(safely(check));
 
 }
 
@@ -180,7 +180,7 @@ shared class ExpectToThrow(
         }
     }
 
-    runTests() => actions.map((Anything() action) => { action }) collect shouldThrow(expectedException, describeError);
+    runTests() => actions.map((Anything() action) => { action }).collect(shouldThrow(expectedException, describeError));
 
 }
 
@@ -226,8 +226,8 @@ shared class ExpectAllToThrow<out Where = [Anything*]>(
     }
     
     SpecResult[] check(ExpectAllToThrowCase<Where> test) =>
-        shouldThrow(expectedException, describeError)(forEachExample).sequence;
+        shouldThrow(expectedException, describeError)(forEachExample).sequence();
     
-    runTests() => expectations collect check;
+    runTests() => expectations.collect(check);
     
 }

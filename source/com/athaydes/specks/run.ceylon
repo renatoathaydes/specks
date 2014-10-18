@@ -45,7 +45,7 @@ shared void run() {
         },
         ExpectAll {
             "Using generated examples";
-            examples = { generateIntegers().sequence };
+            examples = { generateIntegers().sequence() };
             (Integer* ints) => sort(ints) == ints
         },
         ExpectToThrow {

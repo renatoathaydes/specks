@@ -33,7 +33,7 @@ test shared Specification generatorOfIntegers() =>
         },
         ExpectAll {
             "Generated integers to be sorted";
-            examples = { generateIntegers().sequence };
+            examples = { generateIntegers().sequence() };
             (Integer* ints) => sort(ints) == ints
         },
         ExpectAllToThrow {

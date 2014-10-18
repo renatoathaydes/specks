@@ -76,7 +76,7 @@ test shared void expectShouldFailWithExplanationMessage() {
         }
     }.run();
 
-    assertEquals(flatten(specResult).map(asString).sequence, [
+    assertEquals(flatten(specResult).map(asString).sequence(), [
         "Expect 'desc' Failed: 3 is not larger than 4",
         "Expect 'desc' Failed: 1 is not equal to 2",
         "Expect 'desc' Failed: 10 is not smaller than 9",
@@ -97,7 +97,7 @@ test shared void expectAllShouldFailWithExplanationMessageForFailedExamples() {
         }
     }.run();
 
-    assertEquals(flatten(specResult).map(asString).sequence, [
+    assertEquals(flatten(specResult).map(asString).sequence(), [
         "ExpectAll 'desc' Failed: [a, b]",
         "ExpectAll 'desc' Failed: [c, d]",
         "ExpectAll 'desc' Failed: [a, b]",
