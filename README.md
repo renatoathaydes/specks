@@ -62,7 +62,7 @@ In ``specks``, there are different types of Expectations you can express:
 
 ### Expect
 
-Simplest form:
+Simplest form - expectations are expressed as functions which return a Boolean (`true` for pass, `false` for fail):
 
 ```ceylon
 Expect {
@@ -72,7 +72,7 @@ Expect {
 }
 ```
 
-Using ``Comparison``:
+Preferred form: Using ``Comparison`` -> { values to compare }:
 
 ```ceylon
 Expect {
@@ -84,19 +84,31 @@ Expect {
 
 This form allows for better error messages as the values of the parameters are known.
 
-For example, this Specification:
+At least 2 items must be provided in each entry's item, and the comparison of each item with the next is expected to yield `true`
+for the test to succeed.
+
+The following example passes:
 
 ```ceylon
 Expect {
-    "bad comparisons to work!";
-    equal -> [2 + 2, 8]
+    "items to be in ascending order";
+    smaller -> [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 }
 ```
 
-Would result in a failure with a nicer error message:
+The following example fails:
+
+```ceylon
+Expect {
+    "items to be in ascending order";
+    smaller -> [1, 2, 4, 3, 5, 6, 7, 8, 9, 10]
+}
+```
+
+The error message is very descriptive:
 
 ```
-Expect 'bad comparisons to work!' Failed: 4 is not equal to 8
+Expect 'items to be in ascending order' failed: 4 is not smaller than 3
 ```
 
 You can combine different kinds of expectations:
@@ -105,7 +117,8 @@ You can combine different kinds of expectations:
 Expect {
     "simple comparisons to work";
     () => 2 + 2 == 4,
-    equal -> [2 + 2, 4]
+    equal -> [2 + 2, 4],
+    larger -> [ 3 + 3, 3 + 2, 3 + 1, 3 + 0]
 }
 ```
 
@@ -121,13 +134,13 @@ ExpectAll {
 }
 ```
 
-If you wish, you can explicitly "tell" readers of the speck what the first line is (examples):
+The preferred form, however, is to use `Comparison`, as for `Expect`, so you get excellent error messages if the test fails:
 
 ```ceylon
 ExpectAll {
     "examples should pass";
     examples = { [1, 2], [5, 10], [25, 50] };
-    (Integer a, Integer b) => 2 * a == b
+    (Integer a, Integer b) => equal -> { 2 * a, b }
 }
 ```
 
@@ -143,7 +156,7 @@ You can use generators to provide examples for your tests:
 ExpectAll {
     "generated integers to be sorted";
     examples = { generateIntegers().sequence };
-    (Integer* ints) => sort(ints).sequence == ints
+    (Integer* ints) => equal -> { sort(ints).sequence, ints }
 }
 ```
 
@@ -180,7 +193,7 @@ ExpectAllToThrow {
 ```
 
 
-### More examples
+### Example: testing Sequence.first
 
 ```ceylon
 "Ceylon [*].first Speck"
