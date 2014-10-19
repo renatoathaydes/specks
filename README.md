@@ -26,7 +26,7 @@ Notice that if the first expectation function (``s1 == s2``) failed, the next wo
 Contrast that with your normal unit test:
 
 ```ceylon
-void commonUnitTest() {
+test void commonUnitTest() {
     value s1 = "a";
     value s2 = "a";
     value s3 = "";
@@ -38,7 +38,9 @@ void commonUnitTest() {
 }
 ```
 
-If the first assertion fails, you have no way of knowing whether the next ones actually pass or not.
+It's not very clear what is being tested.
+If the first assertion fails, you have no way of knowing whether the next ones actually would pass or not, so you might enter a cycle where you
+run a test, fix the error, then another error comes up and when you fix it the previous one comes back, and so on!
 
 Now imagine the usual real-world scenario when you invariably have many examples you need to test, and on each example you might have many "assertions" to make, and you can see that this just doesn't scale.
 
