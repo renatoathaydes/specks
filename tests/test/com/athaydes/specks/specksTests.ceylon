@@ -77,12 +77,12 @@ test shared void expectShouldFailWithExplanationMessage() {
     }.run();
 
     assertEquals(flatten(specResult).map(asString).sequence(), [
-        "Expect 'desc' Failed: 3 is not larger than 4",
-        "Expect 'desc' Failed: 1 is not equal to 2",
-        "Expect 'desc' Failed: 10 is not smaller than 9",
-        Exception("Expect 'desc': ExpectCase [0] should contain at least 2 elements").string,
+        "Expect 'desc' failed: 3 is not larger than 4",
+        "Expect 'desc' failed: 1 is not equal to 2",
+        "Expect 'desc' failed: 10 is not smaller than 9",
+        Exception("ExpectCase [0] should contain at least 2 elements").string,
         Exception().string,
-        "Expect 'desc' Failed: condition not met"
+        "Expect 'desc' failed: condition not met"
     ]);
 }
 
@@ -98,10 +98,31 @@ test shared void expectAllShouldFailWithExplanationMessageForFailedExamples() {
     }.run();
 
     assertEquals(flatten(specResult).map(asString).sequence(), [
-        "ExpectAll 'desc' Failed: [a, b]",
-        "ExpectAll 'desc' Failed: [c, d]",
-        "ExpectAll 'desc' Failed: [a, b]",
-        "ExpectAll 'desc' Failed: [c, d]",
+        "Expect 'desc' failed: [a, b]",
+        "Expect 'desc' failed: [c, d]",
+        "Expect 'desc' failed: [a, b]",
+        "Expect 'desc' failed: [c, d]",
+        "success",
+        Exception().string
+    ]);
+}
+
+test shared void expectAllWithComparisonsShouldFailWithExplanationMessageForFailedExamples() {
+    value specResult = Specification {
+        ExpectAll {
+            "desc";
+            examples = { ["a", "b"], ["c", "d"] };
+            (String s1, String s2) => larger -> { s1, s2 },
+            (String s1, String s2) => equal -> { s1,  s2 },
+            (String s1, String s2) => s1 == "c" then throwThis(Exception()) else true
+        }
+    }.run();
+    
+    assertEquals(flatten(specResult).map(asString).sequence(), [
+        "Expect 'desc' failed: a is not larger than b",
+        "Expect 'desc' failed: c is not larger than d",
+        "Expect 'desc' failed: a is not equal to b",
+        "Expect 'desc' failed: c is not equal to d",
         "success",
         Exception().string
     ]);

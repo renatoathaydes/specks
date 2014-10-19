@@ -17,7 +17,10 @@ shared alias SpecResult => SpecFailure|SpecSuccess;
 shared alias ExpectCase<Elem> => Boolean()|<Comparison->{Elem+}>;
 
 "Cases of [[ExpectAll]] block's expectations."
-shared alias ExpectAllCase<Where> given Where satisfies [Anything*] => Callable<Boolean, Where>;
+shared alias ExpectAllCase<Where, out Elem>
+        given Where satisfies [Anything*]
+        given Elem satisfies Comparable<Elem>
+        => Callable<Boolean, Where>|Callable<Comparison->{Elem+}, Where>;
 
 "Cases of [[ExpectAllToThrow]] block's expectations."
 shared alias ExpectAllToThrowCase<Where> given Where satisfies [Anything*] => Callable<Anything, Where>;
@@ -36,13 +39,18 @@ shared class Specification(
     "block which describe this [[Specification]]."
     {Block+} blocks) {
 
-    function results(Block block) => block.runTests();
+    function results(Block block) {
+        print("Running block ``block.description``");
+        return block.runTests();
+    }
 
     "Run this [[Specification]]. This method is called by **specks** to run this Specification
      and usually users do not need to call it directly."
     shared {{SpecResult*}*}[] run() => blocks.collect(results);
 
 }
+
+String errorPrefix(String description) => "Expect '``description``' failed: ";
 
 SpecResult maybePrependFailureMsg(String prefix, SpecResult result) {
     if (is String result) {
@@ -51,34 +59,69 @@ SpecResult maybePrependFailureMsg(String prefix, SpecResult result) {
     return result;
 }
 
-SpecResult safeApply<Where>(ExpectAllCase<Where> test, Where where)
-        given Where satisfies [Anything*] {
+SpecResult safeApply<Where, Elem>(ExpectAllCase<Where, Elem> test, Where where, String description)
+        given Where satisfies [Anything*]
+        given Elem satisfies Comparable<Elem> {
+    print("Running test '``description``' with examples ``where``");
+    value failureMsg = errorPrefix(description);
     try {
-        if (test(*where)) {
-            return success;
+        //Callable<Boolean, Where>|Callable<Comparison->{Elem+}, Where>;
+        if (is Callable<Boolean, Where> test) {
+            if (test(*where)) { return success; } 
         }
-        return (where.empty) then "Failed: condition not met"
-        else "Failed: ``where``";
+        else if (is Callable<Comparison->{Elem+}, Where> test) {
+            value result = test(*where);
+            return maybePrependFailureMsg(failureMsg, checkComparisons(result));
+        }
+        else { throw; } // no other case should be possible
+        
+        return (where.empty) then "``failureMsg``condition not met"
+        else "``failureMsg````where``";
     } catch(e) {
         return e;
     }
 }
 
+SpecResult checkComparisons<Elem>(<Comparison->{Elem+}> test)
+        given Elem satisfies Comparable<Elem> {
+    value testItems = test.item;
+    if (testItems.size < 2) {
+        return Exception("ExpectCase ``testItems`` should contain at least 2 elements");
+    }
+    variable Elem prev = testItems.first;
+    for (elem in testItems.rest) {
+        if (prev <=> elem != test.key) {
+            return "``prev`` is not ``strFor(test.key)`` ``elem``";
+        }
+        prev = elem;
+    }
+    return success;
+}
+
+String strFor(Comparison key) {
+    switch (key)
+    case (equal) { return "equal to"; }
+    case (larger) { return "larger than"; }
+    case (smaller) { return "smaller than"; }
+}
+
+
 "A kind of Expectation block which includes examples which should be verified."
-shared class ExpectAll<out Where = [Anything*]>(
+shared class ExpectAll<out Where, out Elem>(
     "Description of this expectation."
     shared actual String description,
     "Examples which will be used to verify expectations.
      Each example will be passed to each expectation function in the order it is declared."
     {Where+} examples,
     "Expectations which describe how a system should behave."
-    {ExpectAllCase<Where>+} expectations)
+    {ExpectAllCase<Where, Elem>+} expectations)
         satisfies Block
-        given Where satisfies [Anything*] {
+        given Where satisfies [Anything*]
+        given Elem satisfies Comparable<Elem> {
 
-    SpecResult[] check(ExpectAllCase<Where> test) =>
-            examples.collect((Where where) =>
-                maybePrependFailureMsg("ExpectAll '``description``' ", safeApply(test, where)));
+    SpecResult[] check(ExpectAllCase<Where, Elem> test)
+            => examples.collect((Where where)
+                => safeApply(test, where, description));
 
     runTests() => expectations.collect(check);
 
@@ -93,31 +136,13 @@ shared class Expect<out Elem>(
         satisfies Block
         given Elem satisfies Comparable<Elem> {
 
-    String strFor(Comparison key) {
-        switch (key)
-        case (equal) { return "equal to"; }
-        case (larger) { return "larger than"; }
-        case (smaller) { return "smaller than"; }
-    }
-
     [SpecResult+] check(ExpectCase<Elem> test) {
         switch (test)
         case (is Boolean()) {
-            return [maybePrependFailureMsg("Expect '``description``' ", safeApply(test, []))];
+            return [safeApply(test, [], description)];
         }
         case (is <Comparison->{Elem+}>) {
-            value testItems = test.item;
-            if (testItems.size < 2) {
-                return [Exception("Expect '``description``': ExpectCase ``testItems`` should contain at least 2 elements")];
-            }
-            variable Elem prev = testItems.first;
-            for (elem in testItems.rest) {
-                if (prev <=> elem != test.key) {
-                    return ["Expect '``description``' Failed: ``prev`` is not ``strFor(test.key)`` ``elem``"];
-                }
-                prev = elem;
-            }
-            return [success];
+            return [maybePrependFailureMsg(errorPrefix(description), checkComparisons(test))];
         }
     }
 
