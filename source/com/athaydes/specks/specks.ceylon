@@ -52,9 +52,9 @@ shared class Specification(
 
 String errorPrefix(String description) => "Expect '``description``' failed: ";
 
-SpecResult maybePrependFailureMsg(String prefix, SpecResult result) {
+SpecResult maybePrependFailureMsg(String prefix, SpecResult result, Object suffix = "") {
     if (is String result) {
-        return prefix + result;
+        return prefix + result + ( suffix == "" then "" else " ``suffix``");
     }
     return result;
 }
@@ -71,14 +71,14 @@ SpecResult safeApply<Where, Elem>(ExpectAllCase<Where, Elem> test, Where where, 
         }
         else if (is Callable<Comparison->{Elem+}, Where> test) {
             value result = test(*where);
-            return maybePrependFailureMsg(failureMsg, checkComparisons(result));
+            return maybePrependFailureMsg(failureMsg, checkComparisons(result), where);
         }
         else { throw; } // no other case should be possible
         
         return (where.empty) then "``failureMsg``condition not met"
         else "``failureMsg````where``";
-    } catch(e) {
-        return e;
+    } catch(Throwable t) {
+        return Exception(t.message, t);
     }
 }
 

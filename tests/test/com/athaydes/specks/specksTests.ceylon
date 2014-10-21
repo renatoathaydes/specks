@@ -119,10 +119,10 @@ test shared void expectAllWithComparisonsShouldFailWithExplanationMessageForFail
     }.run();
     
     assertEquals(flatten(specResult).map(asString).sequence(), [
-        "Expect 'desc' failed: a is not larger than b",
-        "Expect 'desc' failed: c is not larger than d",
-        "Expect 'desc' failed: a is not equal to b",
-        "Expect 'desc' failed: c is not equal to d",
+        "Expect 'desc' failed: a is not larger than b [a, b]",
+        "Expect 'desc' failed: c is not larger than d [c, d]",
+        "Expect 'desc' failed: a is not equal to b [a, b]",
+        "Expect 'desc' failed: c is not equal to d [c, d]",
         "success",
         Exception().string
     ]);
