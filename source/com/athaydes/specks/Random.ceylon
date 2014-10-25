@@ -31,16 +31,23 @@ Integer maxInt = 2^52;
 Integer minInt = -maxInt;
 Integer maximumIntSpan = maxInt - minInt;
 
-"Scales the given Integer from the bounds -2^52 and 2^52 to the provided bounds.
+"Scales the given Integer from the bounds `-2^52` and `2^52` to the provided bounds.
  
  Examples:
    * scale(0) == 0
    * scale(2^52, -10, 10) == 10
    * scale(-(2^52), -10, 10) == -10"
 see(`function Random.nextInteger`)
+throws(`class Exception`, "if minimum > maximum")
 shared Integer scale(Integer integer, Integer minimum = -1M, Integer maximum = 1M) {
-    assert(minimum < maximum);
-    return (max {min {integer, maxInt}, minInt} - minInt) *
-               (maximum - minimum) / (maximumIntSpan) + minimum;
+    if (minimum > maximum) { throw Exception("minimum ``minimum`` > maximum ``maximum``"); }
+    value smallInt = -1M < integer < 1M;
+    value v1 = max {min {integer, maxInt}, minInt} - (smallInt then -10M else minInt);
+    value v2 = maximum - minimum;
+    value v1Smaller = v1.magnitude < v2.magnitude;
+    value maxSpan = smallInt then 20M else maximumIntSpan;
+    return v1Smaller
+        then (v1 * (v2.float / maxSpan)).integer + minimum
+        else (v2 * (v1.float / maxSpan)).integer + minimum;
 }
 

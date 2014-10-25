@@ -11,6 +11,18 @@ import com.athaydes.specks {
     ExpectAllToThrow,
     generateStrings
 }
+import com.athaydes.specks.assertion {
+    expect
+}
+import com.athaydes.specks.matcher {
+    equalTo,
+    toBe,
+    be,
+    to,
+    smallerThan,
+    largerThan,
+    containSameAs
+}
 
 void run() {
     print(generatorOfIntegers().run());
@@ -42,29 +54,47 @@ shared Specification generatorOfIntegers() => Specification {
     ExpectAll {
         "to generate integers array of expected size";
         examples = { [1], [3], [4], [5], [10], [100] };
-        (Integer max) => equal -> { generateIntegers { count = max; }.size, max }
+        (Integer max) => expect(generateIntegers { count = max; }.size,
+            toBe(equalTo(max)))
     },
     ExpectAll {
         "each array of integers should be unique";
         examples = { [2], [3], [4], [5], [10], [100] };
-        (Integer max) => countEachUnique(generateIntegers { count = max; }).select((count) => count > 1).empty
+        (Integer max) => expect(
+            countEachUnique(generateIntegers { count = max; })
+            .select((count) => count > 1).empty,
+            to(be(true)))
     },
     ExpectAll {
         "the average of the generated integers should be close to 0";
         examples = { [1], [2], [3], [5], [10], [100] };
-        (Integer max) => smaller -> { -10, average(generateIntegers(max)), 10 }
+        (Integer max) => expect(average(generateIntegers(max)),
+            toBe(smallerThan(10), largerThan(-10)))
     },
     ExpectAll {
         "Generated integers to be sorted";
         examples = { generateIntegers().sequence() };
-        (Integer* ints) => sort(ints) == ints
+        (Integer* ints) => expect(sort(ints),
+            to(containSameAs(ints)))
     },
     ExpectAll {
         "Generated integers to be within bounds";
         examples = { [0, 10], [-10, 10], [-105, 543] };
         function(Integer low, Integer high) {
             value ints = generateIntegers { count = 4; lowerBound = low; higherBound = high; };
-            return ints.first == low && ints.last == high;
+            return expect(ints.first, toBe(equalTo(low)));
+        },
+        function(Integer low, Integer high) {
+            value ints = generateIntegers { count = 4; lowerBound = low; higherBound = high; };
+            return expect(ints.last, toBe(equalTo(high)));
+        },
+        function(Integer low, Integer high) {
+            value ints = generateIntegers { count = 4; lowerBound = low; higherBound = high; };
+            return expect(ints.count((it) => it > high), toBe(equalTo(0)));
+        },
+        function(Integer low, Integer high) {
+            value ints = generateIntegers { count = 4; lowerBound = low; higherBound = high; };
+            return expect(ints.count((it) => it < low), toBe(equalTo(0)));
         }
     },
     ExpectAllToThrow {
@@ -83,8 +113,7 @@ shared Specification generatorOfStrings() => Specification {
         examples = { [0, 10], [1, 10], [105, 543] };
         (Integer low, Integer high) {
             value strings = generateStrings { shortest = low; longest = high; }.sequence();
-            print(strings);
-            return strings.every((String element) => low <= element.size <= high);
+            return expect(strings.every((String element) => low <= element.size <= high), to(be(true)));
         }
     }
 };

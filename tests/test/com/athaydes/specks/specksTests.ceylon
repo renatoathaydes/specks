@@ -11,10 +11,16 @@ import com.athaydes.specks {
     ExpectToThrow,
     ExpectAll,
     Specification,
-    Expect,
     SpecResult,
     ExpectAllToThrow,
     success
+}
+import com.athaydes.specks.assertion {
+    expect,
+    AssertionResult
+}
+import com.athaydes.specks.matcher {
+    ...
 }
 
 
@@ -28,22 +34,22 @@ Boolean throwThis(Exception e) {
 test shared void happySpecificationThatPassesAllTests() {
     value specResult = Specification {
         ExpectAll {
-            "";
             examples = { [2, 4, 6], [0, 0, 0], [-1, 0, -1] };
-            (Integer a, Integer b, Integer c) => a + b == c,
-            (Integer a, Integer b, Integer c) => b + a == c
+            (Integer a, Integer b, Integer c) => expect(a + b, equalTo(c)),
+            (Integer a, Integer b, Integer c) => expect(b + a, equalTo(c))
         },
-        Expect {
-            "";
-            () => 2 + 2 == 4,
-            equal -> [2 + 2, 4],
-            equal -> [5 + 1, 1 + 5, 6],
-            larger -> [2 + 1, 2]
+        ExpectAll {
+            assertions = {
+                () => expect(2 + 2, equalTo(4)),
+                () => expect(3 + 2, equalTo(5)),
+                () => expect(4 + 2, equalTo(6)),
+                () => expect(null, not(to(exist)))
+            };
         },
         ExpectToThrow {
             `Exception`;
             "when throwing this exception";
-            () => throwThis(Exception("Bad"))
+            () => throwThis(Exception())
         },
         ExpectAllToThrow {
             `Exception`;
@@ -61,18 +67,20 @@ test shared void happySpecificationThatPassesAllTests() {
 String asString(SpecResult result) => result?.string else "success";
 
 test shared void expectShouldFailWithExplanationMessage() {
-    Integer error() {
+    AssertionResult error() {
         throw;
     }
     value specResult = Specification {
-        Expect {
+        ExpectAll {
             "desc";
-            larger -> [2 + 1, 4],
-            equal -> [1, 2, 3],
-            smaller -> [10, 9],
-            equal -> [0],
-            equal -> {error(), 1},
-            () => 2 + 2 == 10
+            [];
+            
+            () => expect(2 + 1, largerThan(4)),
+            () => expect(3 - 2, equalTo(2)),
+            () => expect(5 + 5, smallerThan(9)),
+            error,
+            () => expect(null, exist),
+            () => expect([1,2,3].contains(5), to(be(true)))
         }
     }.run();
 
@@ -80,9 +88,9 @@ test shared void expectShouldFailWithExplanationMessage() {
         "Expect 'desc' failed: 3 is not larger than 4",
         "Expect 'desc' failed: 1 is not equal to 2",
         "Expect 'desc' failed: 10 is not smaller than 9",
-        Exception("ExpectCase [0] should contain at least 2 elements").string,
         Exception().string,
-        "Expect 'desc' failed: condition not met"
+        "Expect 'desc' failed: expected to exist but was null",
+        "Expect 'desc' failed: expected true but was false"
     ]);
 }
 
@@ -91,33 +99,17 @@ test shared void expectAllShouldFailWithExplanationMessageForFailedExamples() {
         ExpectAll {
             "desc";
             examples = { ["a", "b"], ["c", "d"] };
-            (String s1, String s2) => s1 > s2,
-            (String s1, String s2) => s1 == s2,
-            (String s1, String s2) => s1 == "c" then throwThis(Exception()) else true
+            (String s1, String s2) => expect(s1, largerThan(s2)),
+            (String s1, String s2) => expect(s1, equalTo(s2)),
+            function(String s1, String s2) {
+                if (s1 == "c") {
+                    throw;
+                }
+                return expect(true, to(exist));
+            }
         }
     }.run();
 
-    assertEquals(flatten(specResult).map(asString).sequence(), [
-        "Expect 'desc' failed: [a, b]",
-        "Expect 'desc' failed: [c, d]",
-        "Expect 'desc' failed: [a, b]",
-        "Expect 'desc' failed: [c, d]",
-        "success",
-        Exception().string
-    ]);
-}
-
-test shared void expectAllWithComparisonsShouldFailWithExplanationMessageForFailedExamples() {
-    value specResult = Specification {
-        ExpectAll {
-            "desc";
-            examples = { ["a", "b"], ["c", "d"] };
-            (String s1, String s2) => larger -> { s1, s2 },
-            (String s1, String s2) => equal -> { s1,  s2 },
-            (String s1, String s2) => s1 == "c" then throwThis(Exception()) else true
-        }
-    }.run();
-    
     assertEquals(flatten(specResult).map(asString).sequence(), [
         "Expect 'desc' failed: a is not larger than b [a, b]",
         "Expect 'desc' failed: c is not larger than d [c, d]",

@@ -114,14 +114,16 @@ shared Integer binaryToInteger(Byte[] bytes) {
 }
 
 shared [Byte+] toBinary(Integer number) {
-    value intDiv = number / #FF;
-    if (intDiv == 0) {
-        return [Byte(number)];
+    value parts = number / #7F;
+    if (parts == 0) {
+        return [number.byte];
     }
-    if (intDiv == 1) {
-        return [Byte((number - #FF) % #FF), Byte(number % #FF)];
-    }
-    return [Byte(0)];
+    variable Integer remaining = number;
+    return (0..parts).collect((index) {
+        value part = remaining % #7F;
+        remaining /= #7F;
+        return part.byte;
+    }).reversed;
 }
 
 shared Byte binaryAdd(Byte a, Byte b) {

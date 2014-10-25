@@ -14,7 +14,18 @@ import com.athaydes.specks {
     Random,
     scale,
     ExpectAll,
-    Expect
+    ExpectAllToThrow
+}
+import com.athaydes.specks.assertion {
+    expect
+}
+import com.athaydes.specks.matcher {
+    toBe,
+    equalTo,
+    to,
+    be,
+    largerThan,
+    smallerThan
 }
 
 [Integer[]+] partition({Integer+} ints, Integer partitionsCount, variable Integer low, Integer step) {
@@ -98,37 +109,55 @@ class RandomSpeck() {
     value random = Random();
     
     function randomIntegers(Integer count, Integer(Integer) scale = (Integer int) => int) 
-            => (0..count).collect((_) => scale(random.nextInteger()));
+            => (1..count).collect((_) => scale(random.nextInteger()));
     
     // should mirror the value used in Random
     Integer maxInt = 2^52;
     
     shared test Specification scaleSpeck() => Specification {
         ExpectAll {
+            "CeylonDoc examples to be correct";
+            [];
+            () => expect(scale(0), toBe(equalTo(0))),
+            () => expect(scale(2^52, -10, 10), toBe(equalTo(10))),
+            () => expect(scale(-(2^52), -10, 10), toBe(equalTo(-10)))
+        },
+        ExpectAll {
             "Integers can be scaled to within a given range";
             examples = [
                 [0, -5, 5, 0], [-maxInt, -5, 5, -5], [maxInt, -5, 5, 5], 
                 [-maxInt/2, -6, 6, -3], [maxInt/2, -6, 6, 3],
-                [-maxInt/3, -6, 6, -2], [maxInt/3, -6, 6, 1]];
+                [-maxInt/3, -6, 6, -2], [maxInt/3, -6, 6, 1],
+                [5, 5, 5, 5], [0, -10, -10, -10]];
             (Integer int, Integer min, Integer max, Integer expected) 
-                    => equal -> { scale(int, min, max), expected } 
+                    => expect(scale(int, min, max), toBe(equalTo(expected)))
+        },
+        ExpectAllToThrow {
+            `Exception`;
+            "If maximum < minimum";
+            [[10, 0], [-1, -2], [100, 10]];
+            (Integer min, Integer max) => scale(0, min, max)
         }
     };
     
     value testIntegers = randomIntegers(100k);
     
     shared test Specification randomIntegersReturnsApparentlyRandomValues() => Specification { 
-        Expect {
+        ExpectAll {
             "Random integers are generated with uniform distribution";
-            () => uniformDistribution(testIntegers)
+            [];
+            () => expect(uniformDistribution(testIntegers), to(be(true)))
         },
-        Expect {
+        ExpectAll {
             "The difference between successive values has natural distribution";
-            () => naturalDistribution(successiveDiff(testIntegers))
+            [];
+            () => expect(naturalDistribution(successiveDiff(testIntegers)), to(be(true)))
         },
-        Expect {
+        ExpectAll {
             "Nearly no repitition within a million integers";
-            smaller -> { 1M - 5, uniqueElements(randomIntegers(1M)), 1M + 5}
+            [];
+            () => expect(uniqueElements(randomIntegers(1M)),
+                toBe(largerThan(1M - 5), smallerThan(1M + 5)))
         }
     };
     

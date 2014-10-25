@@ -2,6 +2,12 @@ import ceylon.language.meta.model {
     Type
 }
 
+import com.athaydes.specks.assertion {
+    AssertionResult,
+    assertionSuccess,
+    AssertionFailure
+}
+
 "The result of running a Specification which fails or causes an error.
  A String represents a failure and describes the reason for the failure.
  An Exception means an unexpected error which occurred when trying to run the Specification."
@@ -13,23 +19,16 @@ shared alias SpecSuccess => Null;
 "The result of running a Specification."
 shared alias SpecResult => SpecFailure|SpecSuccess;
 
-"Cases of [[Expect]] block's expectations."
-shared alias ExpectCase<Elem> => Boolean()|<Comparison->{Elem+}>;
-
-"Cases of [[ExpectAll]] block's expectations."
-shared alias ExpectAllCase<Where, out Elem>
-        given Where satisfies [Anything*]
-        given Elem satisfies Comparable<Elem>
-        => Callable<Boolean, Where>|Callable<Comparison->{Elem+}, Where>;
-
 "Cases of [[ExpectAllToThrow]] block's expectations."
-shared alias ExpectAllToThrowCase<Where> given Where satisfies [Anything*] => Callable<Anything, Where>;
+shared alias ExpectAllToThrowCase<Where>
+        given Where satisfies [Anything*]
+        => Callable<Anything, Where>;
 
 "The result of running a Specification which is successful."
 shared SpecSuccess success = null;
 
 "Most generic kind of block which forms a [[Specification]]."
-shared interface Block {
+shared sealed interface Block {
     shared formal String description;
     shared formal {{SpecResult*}*} runTests();
 }
@@ -52,112 +51,67 @@ shared class Specification(
 
 String errorPrefix(String description) => "Expect '``description``' failed: ";
 
-SpecResult maybePrependFailureMsg(String prefix, SpecResult result, Object suffix = "") {
-    if (is String result) {
-        return prefix + result + ( suffix == "" then "" else " ``suffix``");
+SpecResult maybePrependFailureMsg(String prefix, AssertionResult result, Object suffix = "") {
+    String suffixString(Object suffix) {
+        if (is {Anything*} suffix) {
+            return suffix.empty then "" else " " + suffix.string;
+        }
+        return " " + suffix.string;
     }
-    return result;
+    switch(result)
+    case (is AssertionFailure) {
+        return prefix + result.string + suffixString(suffix);
+    }
+    case(assertionSuccess) {
+        return success;    
+    }
 }
 
-SpecResult safeApply<Where, Elem>(ExpectAllCase<Where, Elem> test, Where where, String description)
-        given Where satisfies [Anything*]
-        given Elem satisfies Comparable<Elem> {
+SpecResult safeApply<Where>(Callable<AssertionResult, Where> test, Where where, String description)
+        given Where satisfies [Anything*] {
     print("Running test '``description``' with examples ``where``");
     value failureMsg = errorPrefix(description);
     try {
-        //Callable<Boolean, Where>|Callable<Comparison->{Elem+}, Where>;
-        if (is Callable<Boolean, Where> test) {
-            if (test(*where)) { return success; } 
-        }
-        else if (is Callable<Comparison->{Elem+}, Where> test) {
-            value result = test(*where);
-            return maybePrependFailureMsg(failureMsg, checkComparisons(result), where);
-        }
-        else { throw; } // no other case should be possible
-        
-        return (where.empty) then "``failureMsg``condition not met"
-        else "``failureMsg````where``";
+        value result = test(*where);
+        return maybePrependFailureMsg(failureMsg, result, where);
     } catch(Throwable t) {
         return Exception(t.message, t);
     }
 }
 
-SpecResult checkComparisons<Elem>(<Comparison->{Elem+}> test)
-        given Elem satisfies Comparable<Elem> {
-    value testItems = test.item;
-    if (testItems.size < 2) {
-        return Exception("ExpectCase ``testItems`` should contain at least 2 elements");
-    }
-    variable Elem prev = testItems.first;
-    for (elem in testItems.rest) {
-        if (prev <=> elem != test.key) {
-            return "``prev`` is not ``strFor(test.key)`` ``elem``";
-        }
-        prev = elem;
-    }
-    return success;
-}
-
-String strFor(Comparison key) {
-    switch (key)
-    case (equal) { return "equal to"; }
-    case (larger) { return "larger than"; }
-    case (smaller) { return "smaller than"; }
-}
-
-
 "A kind of Expectation block which includes examples which should be verified."
-shared class ExpectAll<out Where, out Elem>(
+shared class ExpectAll<Where = []>(
     "Description of this expectation."
-    shared actual String description,
+    shared actual String description = "",
     "Examples which will be used to verify expectations.
      Each example will be passed to each expectation function in the order it is declared."
-    {Where+} examples,
-    "Expectations which describe how a system should behave."
-    {ExpectAllCase<Where, Elem>+} expectations)
+    {Where*} examples = [],
+    "All assertions that are expected to pass."
+    {Callable<AssertionResult, Where>*} assertions = {})
         satisfies Block
-        given Where satisfies [Anything*]
-        given Elem satisfies Comparable<Elem> {
+        given Where satisfies Anything[] {
 
-    SpecResult[] check(ExpectAllCase<Where, Elem> test)
-            => examples.collect((Where where)
-                => safeApply(test, where, description));
-
-    runTests() => expectations.collect(check);
-
-}
-
-"Simple kind of Expectation block which accepts expectations of type [[ExpectCase]]"
-shared class Expect<out Elem>(
-    "Description of this expectation."
-    shared actual String description,
-    "Expectations which describe how a system should behave."
-    {ExpectCase<Elem>+} expectations)
-        satisfies Block
-        given Elem satisfies Comparable<Elem> {
-
-    [SpecResult+] check(ExpectCase<Elem> test) {
-        switch (test)
-        case (is Boolean()) {
-            return [safeApply(test, [], description)];
-        }
-        case (is <Comparison->{Elem+}>) {
-            return [maybePrependFailureMsg(errorPrefix(description), checkComparisons(test))];
-        }
+    SpecResult[] check(Callable<AssertionResult, Where> test) {
+         if (is Callable<AssertionResult, []> test) {
+             return [safeApply(test, [], description)];
+         } else {
+             return examples.collect((Where where)
+                 => safeApply(test, where, description));
+         }
     }
-
-    [SpecResult+](ExpectCase<Elem>) safely([SpecResult+](ExpectCase<Elem>) test) {
-        function safe(ExpectCase<Elem> f) {
-            try {
-                return check(f);
-            } catch(e) {
-                return [e];
-            }
+    
+    {{SpecResult*}*} assertTestsRun({{SpecResult*}*}() runner) {
+        value result = runner();
+        if (result.empty || result.every((it) => it.empty)) {
+            return {{Exception("Did not find any tests to run.")}};
         }
-        return safe;
+        return result;
     }
+        
 
-    runTests() => expectations.collect(safely(check));
+    runTests() => assertTestsRun(() => assertions.collect(check));
+    
+    string = "Number of tests: ``assertions.size``";
 
 }
 
