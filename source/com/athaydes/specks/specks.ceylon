@@ -1,7 +1,3 @@
-import ceylon.language.meta.model {
-    Type
-}
-
 import com.athaydes.specks.assertion {
     AssertionResult,
     assertionSuccess,
@@ -19,11 +15,6 @@ shared alias SpecSuccess => Null;
 "The result of running a Specification."
 shared alias SpecResult => SpecFailure|SpecSuccess;
 
-"Cases of [[ExpectAllToThrow]] block's expectations."
-shared alias ExpectAllToThrowCase<Where>
-        given Where satisfies [Anything*]
-        => Callable<Anything, Where>;
-
 "The result of running a Specification which is successful."
 shared SpecSuccess success = null;
 
@@ -37,176 +28,160 @@ shared sealed interface Block {
 shared class Specification(
     "block which describe this [[Specification]]."
     {Block+} blocks) {
-
+    
     function results(Block block) {
         print("Running block ``block.description``");
         return block.runTests();
     }
-
+    
     "Run this [[Specification]]. This method is called by **specks** to run this Specification
      and usually users do not need to call it directly."
     shared {{SpecResult*}*}[] run() => blocks.collect(results);
-
+    
 }
 
-String errorPrefix(String description) => "Expect '``description``' failed: ";
-
-SpecResult maybePrependFailureMsg(String prefix, AssertionResult result, Object suffix = "") {
-    String suffixString(Object suffix) {
-        if (is {Anything*} suffix) {
-            return suffix.empty then "" else " " + suffix.string;
-        }
-        return " " + suffix.string;
+{{SpecResult*}*} assertSpecResultsExist({{SpecResult*}*} result) {
+    if (result.empty || result.every((it) => it.empty)) {
+        throw Exception("Did not find any tests to run.");
     }
-    switch(result)
-    case (is AssertionFailure) {
-        return prefix + result.string + suffixString(suffix);
-    }
-    case(assertionSuccess) {
-        return success;    
-    }
+    return result;
 }
 
-SpecResult safeApply<Where>(Callable<AssertionResult, Where> test, Where where, String description)
-        given Where satisfies [Anything*] {
-    print("Running test '``description``' with examples ``where``");
-    value failureMsg = errorPrefix(description);
+SpecResult specResult(AssertionResult() applyAssertion, String description, Anything[] where) {
     try {
-        value result = test(*where);
-        return maybePrependFailureMsg(failureMsg, result, where);
+        value result = applyAssertion();
+        switch(result)
+        case (is AssertionFailure) {
+            value whereString = where.empty then "" else " ``where``";
+            return "``description`` failed: ``result````whereString``";
+        }
+        case(assertionSuccess) {
+            return success;    
+        }    
     } catch(Throwable t) {
+        t.printStackTrace();
         return Exception(t.message, t);
     }
 }
 
-"A kind of Expectation block which includes examples which should be verified."
-shared class ExpectAll<Where = []>(
-    "Description of this expectation."
-    shared actual String description = "",
-    "Examples which will be used to verify expectations.
-     Each example will be passed to each expectation function in the order it is declared."
-    {Where*} examples = [],
-    "All assertions that are expected to pass."
-    {Callable<AssertionResult, Where>*} assertions = {})
-        satisfies Block
-        given Where satisfies Anything[] {
+String blockDescription(String blockName, String simpleDescription)
+        => blockName + (simpleDescription.empty then "" else " '``simpleDescription``'");
 
-    SpecResult[] check(Callable<AssertionResult, Where> test) {
-         if (is Callable<AssertionResult, []> test) {
-             return [safeApply(test, [], description)];
-         } else {
-             return examples.collect((Where where)
-                 => safeApply(test, where, description));
-         }
-    }
-    
-    {{SpecResult*}*} assertTestsRun({{SpecResult*}*}() runner) {
-        value result = runner();
-        if (result.empty || result.every((it) => it.empty)) {
-            return {{Exception("Did not find any tests to run.")}};
-        }
-        return result;
-    }
+
+Block assertionsWithoutExamplesBlock<Result>(
+    String internalDescription,
+    AssertionResult()(Callable<AssertionResult, Result>) apply,
+    "Assertions to verify the result of running the 'when' function."
+    {Callable<AssertionResult, Result>+} assertions)
+            given Result satisfies Anything[] {
+
+    object block satisfies Block {
+        description = internalDescription;
         
+        runTests() => assertSpecResultsExist([assertions.collect((assertion)
+            => specResult(apply(assertion), description, []))]);
+    }
 
-    runTests() => assertTestsRun(() => assertions.collect(check));
-    
-    string = "Number of tests: ``assertions.size``";
-
+    return block;
 }
 
-String platformIndependentName(Object name) =>
-        name.string.replace("::", ".");
+Block assertionsWithExamplesBlock<Where>(
+    String internalDescription,
+    AssertionResult(Where)[] assertions,
+    {Where*} examples)
+        given Where satisfies Anything[] {
+    
+    SpecResult[] safeApplyAll(
+        AssertionResult(Where) when,
+        String description,
+        {Where*} examples) {
+        
+        AssertionResult() applyExample(Where example)
+                => () => when(example);
+        
+        return examples.collect((example)
+            => specResult(applyExample(example), description, example));
+    }
+    
+    object block satisfies Block {
+        description = internalDescription;
+        
+        runTests() => assertSpecResultsExist(assertions.collect((assertion)
+            => safeApplyAll(assertion, description, examples)));
+        
+        string = "[``description`` - ``assertions.size`` assertions, ``examples.size`` examples]";   
+    }
+    
+    return block;
+}
 
+"A feature block allows the description of how a software functionality is expected to work."
+shared Block feature<out Where = [], in Result = Where>(
+    "The action being tested in this feature."
+    Callable<Result, Where> when,
+    "Assertions to verify the result of running the 'when' function."
+    {Callable<AssertionResult, Result>+} assertions,
+    "Description of this feature."
+    String description = "",
+    "Input examples.<p/>
+     Each example will be passed to each assertion function in the order it is declared."
+    {Where*} examples = [])
+        given Where satisfies Anything[]
+        given Result satisfies Anything[] {
+    
+    value internalDescription = blockDescription("Feature", description);
+    
+    if (examples.empty) {
+        print("No examples!");
+        "If you do not provide any examples, your 'when' function must not take any parameters."
+        assert(is Callable<Result, []> when);
+        print("when takes no params");
+        return assertionsWithoutExamplesBlock(internalDescription,
+            (Callable<AssertionResult, Result> assertion) => ()
+                    => assertion(*when()), assertions);
+    } else {
+        return assertionsWithExamplesBlock(internalDescription, assertions.collect((assertion)
+            => (Where example) => assertion(*when(*example))), examples);    
+    }
+}
 
-{SpecResult*} shouldThrow(Type<Exception> expectedException, String(Exception?) errorDescriber)
-                         ({Anything()*} actions) {
-    SpecResult runAction(Anything() action) {
+shared Block errorCheck<Where = []>(
+    "The action being tested in this feature."
+    Callable<Anything, Where> when,
+    {AssertionResult(Throwable?)+} assertions,
+    String description = "",
+    "Input examples.<p/>
+     Each example will be passed to each assertion function in the order it is declared."
+    {Where*} examples = [])
+        given Where satisfies Anything[] {
+    
+    AssertionResult applyAssertionToExample(AssertionResult(Throwable?) assertion)(Where example) {
         try {
-            action();
-            return errorDescriber(null);
-        } catch(e) {
-            value exceptionClass = className(e);
-            if (platformIndependentName(exceptionClass) == platformIndependentName(expectedException)) {
-                return success;
-            } else {
-                return errorDescriber(e);
-            }
+            when(*example);
+            return assertion(null);
+        } catch (Throwable t) {
+            return assertion(t);
         }
     }
-    return { for (action in actions) runAction(action) };
+    
+    AssertionResult() applyAssertion(Anything() when)(AssertionResult(Throwable?) assertion) {
+        try {
+            when();
+            return () => assertion(null);
+        } catch (Throwable t) {
+            return () => assertion(t);
+        }
+    }
+    
+    value internalDescription = blockDescription("ErrorCheck", description);
+    
+    if (examples.empty) {
+        "If you do not provide any examples, your 'when' function must not take any parameters."
+        assert(is Callable<Anything, []> when);
+        return assertionsWithoutExamplesBlock(internalDescription, applyAssertion(when), assertions);
+    } else {
+        return assertionsWithExamplesBlock(internalDescription, assertions.collect((assertion)
+            => applyAssertionToExample(assertion)), examples);    
+    }
 }
 
-"A kind of Expectation block which can be used to verify that errors are handled correctly."
-shared class ExpectToThrow(
-    "the exact type of the Exception which should be thrown by the given actions."
-    Type<Exception> expectedException,
-    "Description of this expectation."
-    shared actual String description,
-    "actions which should cause errors and throw the expected exception."
-    {Anything()+} actions)
-        satisfies Block {
-    
-    String describeError(Exception? actualException) {
-        switch (actualException)
-        case (is Null) {
-            return "ExpectToThrow ``expectedException`` '``description``' " +
-                    "Failed: did not throw any Exception";
-        }
-        case (is Exception) {
-            return "ExpectToThrow ``expectedException`` '``description``' " +
-                "Failed: threw ``className(actualException)`` instead";
-        }
-    }
-
-    runTests() => actions.map((Anything() action) => { action }).collect(shouldThrow(expectedException, describeError));
-
-}
-
-"A kind of Expectation block which can be used to verify that errors are handled correctly for each example provided."
-shared class ExpectAllToThrow<out Where = [Anything*]>(
-    "the exact type of the Exception which should be thrown by the given actions."
-    Type<Exception> expectedException,
-    "Description of this expectation."
-    shared actual String description,
-    "Examples which will be used to verify expectations.
-     Each example will be passed to each expectation function in the order it is declared."
-    {Where+} examples,
-    "actions which should cause errors and throw the expected exception."
-    {ExpectAllToThrowCase<Where>+} expectations)
-        satisfies Block
-        given Where satisfies [Anything*] {
-    
-    variable Where? currentExample = null;
-    
-    function currentExampleString() {
-        assert (exists ce = currentExample);
-        return "on ``ce``";
-    }
-    
-    String describeError(Exception? actualException) {
-        switch (actualException)
-        case (is Null) {
-            return "ExpectAllToThrow ``expectedException`` '``description``' " +
-                    "Failed ``currentExampleString()``: did not throw any Exception";
-        }
-        case (is Exception) {
-            return "ExpectAllToThrow ``expectedException`` '``description``' " +
-                    "Failed ``currentExampleString()``: threw ``className(actualException)`` instead";
-        }
-    }
-    
-    {Anything()*} forEachExample {
-        function checkExpectation(ExpectAllToThrowCase<Where> expect, Where example)() {
-            currentExample = example;
-            return expect(*example);
-        }
-        return { for (expect in expectations) for (example in examples) checkExpectation(expect, example) };
-    }
-    
-    SpecResult[] check(ExpectAllToThrowCase<Where> test) =>
-        shouldThrow(expectedException, describeError)(forEachExample).sequence();
-    
-    runTests() => expectations.collect(check);
-    
-}

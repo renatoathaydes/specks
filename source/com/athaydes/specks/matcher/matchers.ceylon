@@ -4,31 +4,43 @@ import com.athaydes.specks.assertion {
     AssertionFailure
 }
 
-shared abstract class Matcher<Element>(shared Element? expected) {
-    
-    shared formal AssertionResult matches(Element actuals);
+"Base class of all **specks** matchers.
+ 
+ A matcher can be used to verify that a value matches some expected result."
+shared abstract class Matcher<Element>(
+    "Expected value"
+    shared Element? expected) {
+
+    "Checks if the actual value matches an expected value."
+    shared formal AssertionResult matches(Element actual);
     
 }
 
-"A utility matcher that may be combined with some other matcher to make some
- expectations more readable, as in:
+"A utility matcher that may be combined with other matchers to make a combined matcher
+ or just make expectations more readable, as in:
  
  <code>
- expect(actual, to(exist));<br/>
- expect([1,2,3], toBe(contain(3)));
+     expect(actual, to(exist));
+     expect([1,2,3], to(contain(3)));
  </code>"
 shared Matcher<Element> to<Element>(Matcher<Element>+ wrappedMatchers)
         => AndMatcher(*wrappedMatchers);
 
-"An alias for [[to]]."
+"An alias for [[to]].
+ 
+ Example usage:
+ 
+ <code>
+     expect(actual, toBe(equalTo(a), largerThan(b));
+ </code>"
 shared Matcher<Element> toBe<Element>(Matcher<Element>+ wrappedMatchers)
         => to(*wrappedMatchers);
 
 "A utility matcher that reverses the result of another matcher, as in:
  
  <code>
- expect(actual, not(to(exist)));<br/>
- expect([1,2,3], not(to(contain(10))));
+     expect(actual, not(to(exist)));
+     expect([1,2,3], not(to(contain(10))));
  </code>"
 shared Matcher<Element> not<Element>(Matcher<Element> wrappedMatcher)
         => WrapperMatcher { wrappedMatcher; reverseResult = true; };
@@ -46,7 +58,9 @@ shared Matcher<Element> smallerThan<Element>(Element expected)
 "A matcher that succeeds only if the actual value exists, ie. the expected value is not null."
 shared Matcher<Anything> exist = ExistenceMatcher { mustExist = true; };
 
-"A matcher that succeeds only if the actual value is equal to the expected value"
+"A matcher that succeeds only if the actual value is equal to the expected value,
+ when compared with the [[Comparable.compare]] method."
+see(`function identicalTo`)
 shared Matcher<Element> equalTo<Element>(Element expected)
         given Element satisfies Comparable<Element>&Object
         => ComparisonMatcher(expected, equal);
@@ -57,18 +71,27 @@ shared Matcher<Element> equalTo<Element>(Element expected)
  Example:
  
  <code>
- expect(1, to(be(1)));
+     expect(1, toBe(identicalTo(1)));
  </code>"
-shared Matcher<Element> be<Element>(Element expected)
+see(`function equalTo`, `interface Identifiable`)
+shared Matcher<Element> identicalTo<Element>(Element expected)
         given Element satisfies Identifiable
         => IdentityMatcher(expected);
+
+"A matcher that succeeds only if the actual Iterable is empty."
+shared Matcher<{Anything*}> empty()
+        => EmptyMatcher<{Anything*}>();
+
+"A matcher that succeeds only if the actual Iterable has the expected size."
+shared Matcher<{Anything*}> haveSize(Integer expectedSize)
+        => HasSizeMatcher<{Anything*}>(expectedSize);
 
 "A matcher that succeeds only if the given element is part of a [[Category]].
  
  Example:
  
  <code>
- expect([1,2,3], to(contain(3)));
+     expect([1,2,3], to(contain(3)));
  </code>"
 shared Matcher<Seq> contain<Seq, Element>(Element element)
         given Seq satisfies Category<Element>
@@ -80,24 +103,54 @@ shared Matcher<Seq> contain<Seq, Element>(Element element)
  Example:
  
  <code>
- expect('a'..'z', to(containEvery('x'..'z')));
+     expect('a'..'z', to(containEvery('x'..'z')));
  </code>"
+see(`function Category.containsEvery`)
 shared Matcher<Seq> containEvery<Seq, Element>({Element*} elements)
         given Seq satisfies Category<Element>
         given Element satisfies Object
         => ContainsEveryMatcher<Seq, Element>(elements);
 
-"A matcher that succeeds only if every one of the given elements are part of a [[Category]].
+"A matcher that succeeds only if at least one of the given elements are part of a [[Category]].
  
  Example:
  
  <code>
- expect('1'..'4', to(containSameAs([1, 2, 3, 4])));
+     expect('a'..'z', to(containAny('x'..'z')));
  </code>"
-shared Matcher<[Element*]> containSameAs<Element>([Element*] elements)
+see(`function Category.containsAny`)
+shared Matcher<Seq> containAny<Seq, Element>({Element*} elements)
+        given Seq satisfies Category<Element>
+        given Element satisfies Object
+        => ContainsAnyMatcher<Seq, Element>(elements);
+
+"A matcher that succeeds only if the actual collection contains exactly the same elements
+ as the given Sequence.
+ 
+ Examples:
+ 
+ <code>
+     // this succeeds
+     expect('1'..'4', to(containSameAs([1, 2, 3, 4])));
+ 
+     // this will fail
+     expect('4'..'1', to(containSameAs([1, 2, 3, 4])));
+ </code>"
+shared Matcher<{Element*}> containSameAs<Element>({Element*} elements)
         given Element satisfies Object
         => ContainsSameElementsMatcher<Element>(elements);
 
+"A matcher that succeeds only if the actual collection contains only elements
+ also present in the given iterable.
+ 
+ Examples:
+ 
+ <code>
+     expect(('1'..'100').map((i) => i % 2), to(containOnly(0, 1)));
+ </code>"
+shared Matcher<{Element*}> containOnly<Element>(Element* elements)
+        given Element satisfies Object
+        => ContainsOnlyMatcher<Element>(elements);
 
 /**************** Matcher implementation classes ********************/
 
@@ -185,6 +238,36 @@ class BooleanMatcher(Boolean expected)
     
 }
 
+class EmptyMatcher<Seq>()
+        extends Matcher<Seq>(null)
+        given Seq satisfies Iterable<Anything> {
+    
+    shared actual AssertionResult matches(Seq actuals) {
+        if (actuals.empty) {
+            return assertionSuccess;
+        } else {
+            return AssertionFailure("iterable is not empty");
+        }
+    }
+    
+}
+
+class HasSizeMatcher<Seq>(Integer expectedSize)
+        extends Matcher<Seq>(null)
+        given Seq satisfies Iterable<Anything> {
+    
+    shared actual AssertionResult matches(Seq actuals) {
+        value actualSize = actuals.size;
+        if (actualSize == expectedSize) {
+            return assertionSuccess;
+        } else {
+            return AssertionFailure("expected iterable of size ``expectedSize`` but was ``actualSize``");
+        }
+    }
+    
+}
+
+
 class ContainsMatcher<Seq, Element>(Element expected)
         extends Matcher<Seq>(null)
         given Seq satisfies Category<Element>
@@ -206,18 +289,32 @@ class ContainsEveryMatcher<Seq, Element>({Element*} expected)
     
     shared actual AssertionResult matches(Seq actuals) {
         if (!actuals.containsEvery(expected)) {
-            return AssertionFailure("Not all ``actuals`` are part of ``expected``");
+            return AssertionFailure("not all ``actuals`` are part of ``expected``");
         }
         return assertionSuccess;
     }
     
 }
 
-class ContainsSameElementsMatcher<Element>([Element*] expected)
-        extends Matcher<[Element*]>(null)
+class ContainsAnyMatcher<Seq, Element>({Element*} expected)
+        extends Matcher<Seq>(null)
+        given Seq satisfies Category<Element>
         given Element satisfies Object {
     
-    shared actual AssertionResult matches([Element*] actuals) {
+    shared actual AssertionResult matches(Seq actuals) {
+        if (!actuals.containsAny(expected)) {
+            return AssertionFailure("none of ``actuals`` is part of ``expected``");
+        }
+        return assertionSuccess;
+    }
+    
+}
+
+class ContainsSameElementsMatcher<Element>({Element*} expected)
+        extends Matcher<{Element*}>(null)
+        given Element satisfies Object {
+    
+    shared actual AssertionResult matches({Element*} actuals) {
         if (actuals.size != expected.size) {
             return AssertionFailure("expected List of size ``expected.size`` \
                                      but was ``actuals.size``");
@@ -229,6 +326,21 @@ class ContainsSameElementsMatcher<Element>([Element*] expected)
                                          ``expectedItem`` but was ``actual``");
             }
             index++;
+        }
+        return assertionSuccess;
+    }
+    
+}
+
+class ContainsOnlyMatcher<Element>({Element*} expected)
+        extends Matcher<{Element*}>(null)
+        given Element satisfies Object {
+    
+    shared actual AssertionResult matches({Element*} actuals) {
+        for (Element actual in actuals) {
+            if (! actual in expected) {
+                return AssertionFailure("unexpected item '``actual``'");    
+            }
         }
         return assertionSuccess;
     }

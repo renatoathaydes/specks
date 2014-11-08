@@ -13,17 +13,17 @@ import com.athaydes.specks {
     Specification,
     Random,
     scale,
-    ExpectAll,
-    ExpectAllToThrow
+    feature,
+    errorCheck
 }
 import com.athaydes.specks.assertion {
-    expect
+    expect,
+    expectToThrow
 }
 import com.athaydes.specks.matcher {
     toBe,
     equalTo,
-    to,
-    be,
+    identicalTo,
     largerThan,
     smallerThan
 }
@@ -115,47 +115,54 @@ class RandomSpeck() {
     Integer maxInt = 2^52;
     
     shared test Specification scaleSpeck() => Specification {
-        ExpectAll {
-            "CeylonDoc examples to be correct";
-            [];
+        feature {
+            description = "CeylonDoc examples to be correct";
+            when() => [];
             () => expect(scale(0), toBe(equalTo(0))),
             () => expect(scale(2^52, -10, 10), toBe(equalTo(10))),
             () => expect(scale(-(2^52), -10, 10), toBe(equalTo(-10)))
         },
-        ExpectAll {
-            "Integers can be scaled to within a given range";
+        feature {
+            description = "Integers can be scaled to within a given range";
+            
+            when(Integer int, Integer min, Integer max, Integer expected) 
+                    => [scale(int, min, max), expected];
+            
             examples = [
                 [0, -5, 5, 0], [-maxInt, -5, 5, -5], [maxInt, -5, 5, 5], 
                 [-maxInt/2, -6, 6, -3], [maxInt/2, -6, 6, 3],
                 [-maxInt/3, -6, 6, -2], [maxInt/3, -6, 6, 1],
                 [5, 5, 5, 5], [0, -10, -10, -10]];
-            (Integer int, Integer min, Integer max, Integer expected) 
-                    => expect(scale(int, min, max), toBe(equalTo(expected)))
+            
+            (Integer result, Integer expected)
+                    => expect(result, toBe(equalTo(expected)))
         },
-        ExpectAllToThrow {
-            `Exception`;
-            "If maximum < minimum";
-            [[10, 0], [-1, -2], [100, 10]];
-            (Integer min, Integer max) => scale(0, min, max)
+        errorCheck {
+            description = "If maximum < minimum";
+            examples = [[10, 0], [-1, -2], [100, 10]];
+            when(Integer min, Integer max) => scale(0, min, max);
+            expectToThrow(`Exception`)
         }
     };
     
     value testIntegers = randomIntegers(100k);
     
     shared test Specification randomIntegersReturnsApparentlyRandomValues() => Specification { 
-        ExpectAll {
-            "Random integers are generated with uniform distribution";
-            [];
-            () => expect(uniformDistribution(testIntegers), to(be(true)))
+        feature {
+            description = "Random integers are generated with uniform distribution";
+            when() => [];
+            () => expect(uniformDistribution(testIntegers),
+                toBe(identicalTo(true)))
         },
-        ExpectAll {
-            "The difference between successive values has natural distribution";
-            [];
-            () => expect(naturalDistribution(successiveDiff(testIntegers)), to(be(true)))
+        feature {
+            description = "The difference between successive values has natural distribution";
+            when() => [];
+            () => expect(naturalDistribution(successiveDiff(testIntegers)),
+                toBe(identicalTo(true)))
         },
-        ExpectAll {
-            "Nearly no repitition within a million integers";
-            [];
+        feature {
+            description = "Nearly no repitition within a million integers";
+            when() => [];
             () => expect(uniqueElements(randomIntegers(1M)),
                 toBe(largerThan(1M - 5), smallerThan(1M + 5)))
         }

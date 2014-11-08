@@ -8,16 +8,17 @@ import ceylon.test {
 }
 
 import com.athaydes.specks {
-    ExpectToThrow,
-    ExpectAll,
     Specification,
     SpecResult,
-    ExpectAllToThrow,
-    success
+    success,
+    feature,
+    errorCheck
 }
 import com.athaydes.specks.assertion {
     expect,
-    AssertionResult
+    AssertionResult,
+    expectToThrow,
+    platformIndependentName
 }
 import com.athaydes.specks.matcher {
     ...
@@ -33,72 +34,70 @@ Boolean throwThis(Exception e) {
 
 test shared void happySpecificationThatPassesAllTests() {
     value specResult = Specification {
-        ExpectAll {
+        feature {
             examples = { [2, 4, 6], [0, 0, 0], [-1, 0, -1] };
-            (Integer a, Integer b, Integer c) => expect(a + b, equalTo(c)),
-            (Integer a, Integer b, Integer c) => expect(b + a, equalTo(c))
+
+            when(Integer a, Integer b, Integer expected)
+                    => [a + b, b + a, expected];
+
+            (Integer r1, Integer r2, Integer expected)
+                    => expect(r1, toBe(equalTo(r2), equalTo(expected)))
         },
-        ExpectAll {
-            assertions = {
-                () => expect(2 + 2, equalTo(4)),
-                () => expect(3 + 2, equalTo(5)),
-                () => expect(4 + 2, equalTo(6)),
-                () => expect(null, not(to(exist)))
-            };
+        feature {
+            when() => [];
+            () => expect(2 + 2, equalTo(4)),
+            () => expect(3 + 2, equalTo(5)),
+            () => expect(4 + 2, equalTo(6)),
+            () => expect(null, not(to(exist)))
         },
-        ExpectToThrow {
-            `Exception`;
-            "when throwing this exception";
-            () => throwThis(Exception())
-        },
-        ExpectAllToThrow {
-            `Exception`;
-            "happy path";
-            {[1], [2]};
-            (Integer i) => throwThis(Exception("Bad"))
+        errorCheck {
+            description = "happy path";
+            examples = {[1], [2]};
+            when(Integer i) => throwThis(Exception("Bad"));
+            expectToThrow(`Exception`)
         }
     }.run();
-    assertEquals(specResult.size, 4);
-    assertEquals(specResult.collect(({{SpecResult*}*} element) => element.size), [2, 4, 1, 1]);
+    assertEquals(specResult.size, 3);
+    assertEquals(specResult.collect(({{SpecResult*}*} element) => element.size), [1, 4, 1]);
 
     assert(flatten(specResult).every((SpecResult result) => equalsCompare(result, success)));
 }
 
 String asString(SpecResult result) => result?.string else "success";
 
-test shared void expectShouldFailWithExplanationMessage() {
+test shared void featuresShouldFailWithExplanationMessage() {
     AssertionResult error() {
         throw;
     }
     value specResult = Specification {
-        ExpectAll {
-            "desc";
-            [];
-            
+        feature {
+            description = "should fail with explanation message";
+            when() => [];
             () => expect(2 + 1, largerThan(4)),
             () => expect(3 - 2, equalTo(2)),
             () => expect(5 + 5, smallerThan(9)),
             error,
             () => expect(null, exist),
-            () => expect([1,2,3].contains(5), to(be(true)))
+            () => expect([1,2,3].contains(5), toBe(identicalTo(true)))
         }
     }.run();
 
     assertEquals(flatten(specResult).map(asString).sequence(), [
-        "Expect 'desc' failed: 3 is not larger than 4",
-        "Expect 'desc' failed: 1 is not equal to 2",
-        "Expect 'desc' failed: 10 is not smaller than 9",
+        "Feature 'should fail with explanation message' failed: 3 is not larger than 4",
+        "Feature 'should fail with explanation message' failed: 1 is not equal to 2",
+        "Feature 'should fail with explanation message' failed: 10 is not smaller than 9",
         Exception().string,
-        "Expect 'desc' failed: expected to exist but was null",
-        "Expect 'desc' failed: expected true but was false"
+        "Feature 'should fail with explanation message' failed: expected to exist but was null",
+        "Feature 'should fail with explanation message' failed: expected true but was false"
     ]);
 }
 
-test shared void expectAllShouldFailWithExplanationMessageForFailedExamples() {
+test shared void featuresShouldFailWithExplanationMessageForFailedExamples() {
     value specResult = Specification {
-        ExpectAll {
-            "desc";
+        feature {
+            description = "desc";
             examples = { ["a", "b"], ["c", "d"] };
+            when(String s1, String s2) => [s1, s2];
             (String s1, String s2) => expect(s1, largerThan(s2)),
             (String s1, String s2) => expect(s1, equalTo(s2)),
             function(String s1, String s2) {
@@ -111,44 +110,32 @@ test shared void expectAllShouldFailWithExplanationMessageForFailedExamples() {
     }.run();
 
     assertEquals(flatten(specResult).map(asString).sequence(), [
-        "Expect 'desc' failed: a is not larger than b [a, b]",
-        "Expect 'desc' failed: c is not larger than d [c, d]",
-        "Expect 'desc' failed: a is not equal to b [a, b]",
-        "Expect 'desc' failed: c is not equal to d [c, d]",
+        "Feature 'desc' failed: a is not larger than b [a, b]",
+        "Feature 'desc' failed: c is not larger than d [c, d]",
+        "Feature 'desc' failed: a is not equal to b [a, b]",
+        "Feature 'desc' failed: c is not equal to d [c, d]",
         "success",
         Exception().string
     ]);
 }
 
-test shared void expectToThrowShouldFailWithExplanationMessage() {
+test shared void errorCheckShouldFailWithExplanationMessageForEachExample() {
+    String desc = "throw this bad";
     value specResult = Specification {
-        ExpectToThrow {
-            `MutationException`;
-            "when throwing this";
-            () => throwThis(Exception("Bad")),
-            () => true
+        errorCheck {
+            description = desc;
+            examples = { [1, 2], [3, 4] };
+            when(Integer i, Integer j) => throwThis(Exception("Bad"));
+            expectToThrow(`MutationException`)
+        },
+        errorCheck {
+            void when() {}
+            expectToThrow(`Exception`)
         }
     }.run();
     
     value errors = flatten(specResult);
-    assertEquals(errors[0], "ExpectToThrow `` `MutationException` `` 'when throwing this' Failed: threw ``className(Exception())`` instead");
-    assertEquals(errors[1], "ExpectToThrow `` `MutationException` `` 'when throwing this' Failed: did not throw any Exception");
-}
-
-test shared void expectAllToThrowShouldFailWithExplanationMessageForEachExample() {
-    value specResult = Specification {
-        ExpectAllToThrow {
-            `MutationException`;
-            "when throwing this";
-            { [1, 2], [3, 4] };
-            (Integer i, Integer j) => throwThis(Exception("Bad")),
-            (Integer i, Integer j) => true
-        }
-    }.run();
-    
-    value errors = flatten(specResult);
-    assertEquals(errors[0], "ExpectAllToThrow `` `MutationException` `` 'when throwing this' Failed on [1, 2]: threw ``className(Exception())`` instead");
-    assertEquals(errors[1], "ExpectAllToThrow `` `MutationException` `` 'when throwing this' Failed on [3, 4]: threw ``className(Exception())`` instead");
-    assertEquals(errors[2], "ExpectAllToThrow `` `MutationException` `` 'when throwing this' Failed on [1, 2]: did not throw any Exception");
-    assertEquals(errors[3], "ExpectAllToThrow `` `MutationException` `` 'when throwing this' Failed on [3, 4]: did not throw any Exception");
+    assertEquals(errors[0], "ErrorCheck '``desc``' failed: expected ``platformIndependentName(`MutationException`)`` but threw ``Exception("Bad")`` [1, 2]");
+    assertEquals(errors[1], "ErrorCheck '``desc``' failed: expected ``platformIndependentName(`MutationException`)`` but threw ``Exception("Bad")`` [3, 4]");
+    assertEquals(errors[2], "ErrorCheck failed: no Exception thrown");
 }
