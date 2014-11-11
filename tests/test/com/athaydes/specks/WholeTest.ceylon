@@ -31,17 +31,70 @@ class WholeTest() {
             description = "toBinary must convert Integer to an array of Bytes in two's complement notation";
             
             when(Integer input, [Integer+] expected)
-                    => [toIntArray(toBinary(input)), expected];
+                    => [toBinary(input), expected];
             
             examples = {
-                [-1, toIntArray([Byte(#FF)])],
+                // one-byte numbers
+                [-128, toIntArray([Byte($1000_0000)])],
+                [-127, toIntArray([Byte($1000_0001)])],
+                [-126, toIntArray([Byte($1000_0010)])],
+                [-5, toIntArray([Byte($1111_1011)])],
+                [-4, toIntArray([Byte($1111_1100)])],
+                [-3, toIntArray([Byte($1111_1101)])],
+                [-2, toIntArray([Byte($1111_1110)])],
+                [-1, toIntArray([Byte($1111_1111)])],
                 [0, toIntArray([Byte(0)])],
                 [1, toIntArray([Byte(1)])],
-                [126, toIntArray([Byte(126)])]
+                [2, toIntArray([Byte(2)])],
+                [126, toIntArray([Byte($0111_1110)])],
+                [127, toIntArray([Byte($0111_1111)])],
+                
+                // two-byte numbers
+                [-32768, toIntArray([Byte($1000_0000), Byte($0000_0000)])],
+                [-32767, toIntArray([Byte($1000_0000), Byte($0000_0001)])],
+                [-32766, toIntArray([Byte($1000_0000), Byte($0000_0010)])],
+                [-513, toIntArray([Byte($1111_1101), Byte($1111_1111)])],
+                [-512, toIntArray([Byte($1111_1110), Byte($0000_0000)])],
+                [-259, toIntArray([Byte($1111_1110), Byte($1111_1101)])],
+                [-258, toIntArray([Byte($1111_1110), Byte($1111_1110)])],
+                [-257, toIntArray([Byte($1111_1110), Byte($1111_1111)])],
+                [-256, toIntArray([Byte($1111_1111), Byte($0000_0000)])],
+                [-255, toIntArray([Byte($1111_1111), Byte($0000_0001)])],
+                [-130, toIntArray([Byte($1111_1111), Byte($0111_1110)])],
+                [-129, toIntArray([Byte($1111_1111), Byte($0111_1111)])],
+                [128, toIntArray([Byte($0000_0000), Byte($1000_0000)])],
+                [129, toIntArray([Byte($0000_0000), Byte($1000_0001)])],
+                [130, toIntArray([Byte($0000_0000), Byte($1000_0010)])],
+                [32766, toIntArray([Byte($0111_1111), Byte($1111_1110)])],
+                [32767, toIntArray([Byte($0111_1111), Byte($1111_1111)])],
+                
+                // three-byte numbers
+                [-8388608, toIntArray([Byte($1000_0000), Byte($0000_0000), Byte($0000_0000)])],
+                [-8388607, toIntArray([Byte($1000_0000), Byte($0000_0000), Byte($0000_0001)])],
+                [-32770, toIntArray([Byte($1111_1111), Byte($0111_1111), Byte($1111_1110)])],
+                [-32769, toIntArray([Byte($1111_1111), Byte($0111_1111), Byte($1111_1111)])],
+                [32768, toIntArray([Byte($0000_0000), Byte($1000_0000), Byte($0000_0000)])],
+                [32769, toIntArray([Byte($0000_0000), Byte($1000_0000), Byte($0000_0001)])],
+                [65535, toIntArray([Byte($0000_0000), Byte($1111_1111), Byte($1111_1111)])],
+                [65536, toIntArray([Byte($0000_0001), Byte($0000_0000), Byte($0000_0000)])],
+                [65537, toIntArray([Byte($0000_0001), Byte($0000_0000), Byte($0000_0001)])],
+                [8388606, toIntArray([Byte($0111_1111), Byte($1111_1111), Byte($1111_1110)])],
+                [8388607, toIntArray([Byte($0111_1111), Byte($1111_1111), Byte($1111_1111)])],
+                
+                // some random numbers
+                [-7654321, toIntArray([Byte($1000_1011), Byte($0011_0100), Byte($0100_1111)])],
+                [-49395967, toIntArray([Byte($1111_1101), Byte($0000_1110), Byte($0100_0111), Byte($0000_0001)])],
+                [5_555_555_555, toIntArray([Byte($0000_0001), Byte($0100_1011), Byte($0010_0011), Byte($0000_1100), Byte($1110_0011)])],
+                [1234567890, toIntArray([Byte($0100_1001), Byte($1001_0110), Byte($0000_0010), Byte($1101_0010)])],
+                
+                // JavaScript limits
+                [9007199254740991, toIntArray([Byte($0001_1111), Byte($1111_1111), Byte($1111_1111), Byte($1111_1111), Byte($1111_1111), Byte($1111_1111), Byte($1111_1111)])],
+                [-9007199254740992, toIntArray([Byte($1110_0000), Byte($0000_0000), Byte($0000_0000), Byte($0000_0000), Byte($0000_0000), Byte($0000_0000), Byte($0000_0000)])]
+                
             };
             
-            ([Integer+] result, [Integer+] expected)
-                    => expect(result, to(containSameAs(expected)))
+            ([Byte+] result, [Integer+] expected)
+                    => expect(toIntArray(result), to(containSameAs(expected)))
         }
     };
     
@@ -57,30 +110,5 @@ class WholeTest() {
                     => expect(result, toBe(equalTo(a + b)))
         }
     };
-    /*
-    test shared Specification binaryCreationSpeck() => Specification {
-        ExpectAll {
-            "binary numbers can be created from Integers";
-            [[0], [1], [100]];
-            (Integer a) => equal -> { binaryToInteger(toBinary(a)), a }
-        }
-    };
     
-    
-    test shared Specification createBytesFromUnsignedInteger() => Specification {
-        ExpectAll {
-            "toBinary to return the appropriate Byte array";
-            [[0, [Byte(0)]],
-             [1, [Byte(1)]],
-             [12, [Byte(12)]],
-             [#FF, [Byte(#FF)]],
-             [#FF1, [Byte(#FF), Byte(1)]],
-             [#FA02E3F4, [Byte(#FA), Byte(#02), Byte(#E3), Byte(#F4)]]];
-            
-            (Integer int, [Byte+] bytes) => equal ->
-                { toBinary(int).collect((b) => b.unsigned), bytes.collect((b) => b.unsigned) }
-        }
-        
-    };
-     */
 }

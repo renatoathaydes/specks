@@ -113,17 +113,65 @@ shared Integer binaryToInteger(Byte[] bytes) {
     return 0;
 }
 
-shared [Byte+] toBinary(Integer number) {
-    value parts = number / #7F;
-    if (parts == 0) {
-        return [number.byte];
+Byte zero = 0.byte;
+Byte one = 1.byte;
+Byte ff = #FF.byte;
+
+[Byte+] addMSBIfNeeded(Integer number, [Byte+] bytes) {
+    if (number.positive && bytes.first.rightLogicalShift(7) == one) {
+        return [zero].append(bytes);
     }
+    if (number.negative && bytes.first.rightLogicalShift(7) == zero) {
+        return [ff].append(bytes);
+    }
+    return bytes;
+}
+
+shared [Byte+] toBinary(Integer number) {
+    value byteMax = 256;
+    value bytes = bytesIn(number) - 1;
     variable Integer remaining = number;
-    return (0..parts).collect((index) {
-        value part = remaining % #7F;
-        remaining /= #7F;
+    variable Integer part = 0;
+    variable Integer previousPart = 0;
+    return addMSBIfNeeded(number, (0..(bytes)).collect((index) {
+        part = remaining % byteMax;
+        
+        // Correction for negative numbers.
+        // There is a 1-off error when transferring bits to a higher byte,
+        // except when transferring the first bit (ie. previousPart == 0)
+        if (number.negative && previousPart != 0) {
+            part--;
+        }
+        previousPart = part;
+        remaining /= byteMax;
         return part.byte;
-    }).reversed;
+    }).reversed);
+}
+
+Integer bytesIn(Integer number) {
+    Integer magnitude = number.magnitude;
+    if (magnitude <= #FF) {
+        return 1;
+    }
+    if (magnitude <= #FF_FF) {
+        return 2;
+    }
+    if (magnitude <= #FF_FF_FF) {
+        return 3;
+    }
+    if (magnitude <= #FF_FF_FF_FF) {
+        return 4;
+    }
+    if (magnitude <= #FF_FF_FF_FF_FF) {
+        return 5;
+    }
+    if (magnitude <= #FF_FF_FF_FF_FF_FF) {
+        return 6;
+    }
+    if (magnitude <= #FF_FF_FF_FF_FF_FF_FF) {
+        return 7;
+    }
+    return 8;
 }
 
 shared Byte binaryAdd(Byte a, Byte b) {

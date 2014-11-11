@@ -117,10 +117,16 @@ class RandomSpeck() {
     shared test Specification scaleSpeck() => Specification {
         feature {
             description = "CeylonDoc examples to be correct";
-            when() => [];
-            () => expect(scale(0), toBe(equalTo(0))),
-            () => expect(scale(2^52, -10, 10), toBe(equalTo(10))),
-            () => expect(scale(-(2^52), -10, 10), toBe(equalTo(-10)))
+            
+            when(Integer i, Integer min, Integer max, Integer expected)
+                    => [scale(i), expected];
+            
+            examples = [[2^52, -10, 10, 10], [-(2^52), -10, 10, -10]];
+            
+            (Integer result, Integer expected)
+                    => expect(scale(0), toBe(equalTo(0))),
+            (Integer result, Integer expected)
+                    => expect(result, toBe(equalTo(expected)))
         },
         feature {
             description = "Integers can be scaled to within a given range";

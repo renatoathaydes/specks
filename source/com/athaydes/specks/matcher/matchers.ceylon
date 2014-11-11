@@ -316,14 +316,16 @@ class ContainsSameElementsMatcher<Element>({Element*} expected)
     
     shared actual AssertionResult matches({Element*} actuals) {
         if (actuals.size != expected.size) {
-            return AssertionFailure("expected List of size ``expected.size`` \
-                                     but was ``actuals.size``");
+            return AssertionFailure("expected Iterable of size ``expected.size``
+                                      but was ``actuals.size``
+                                     Actual: ``actuals``");
         }
         variable Integer index = 0;
         for (actual -> expectedItem in zipEntries(actuals, expected)) {
             if (actual != expectedItem) {
-                return AssertionFailure("element at index ``index`` should be \
-                                         ``expectedItem`` but was ``actual``");
+                return AssertionFailure("element at index ``index`` should be
+                                          ``expectedItem`` but was ``actual``
+                                         Actual: ``actuals``");
             }
             index++;
         }
