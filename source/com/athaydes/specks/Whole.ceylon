@@ -50,8 +50,15 @@ shared interface Whole
 
 shared final class WholeImpl(Integer|String number) satisfies Whole {
     
-    value bytes = Byte(0);
+    [Byte+] bytes;
     
+    switch(number)
+    case (is Integer) {
+        bytes = toBinary(number);
+    }
+    case (is String) {
+        bytes = stringToBinary(number);
+    }
 
     shared actual Comparison compare(Whole other) => nothing;
     
@@ -125,6 +132,10 @@ Byte ff = #FF.byte;
         return [ff].append(bytes);
     }
     return bytes;
+}
+
+shared [Byte+] stringToBinary(String number) {
+    return nothing;
 }
 
 shared [Byte+] toBinary(Integer number) {
