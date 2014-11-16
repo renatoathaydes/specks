@@ -68,8 +68,8 @@ shared final class WholeImpl(Integer|String|[Byte+] number) satisfies Whole {
     
     shared actual Comparison compare(Whole other) {
         assert(is WholeImpl other);
-        value thisNegative = this.bytes.first.get(7);
-        value otherNegative = other.bytes.first.get(7);
+        value thisNegative = signBit(this.bytes);
+        value otherNegative = signBit(other.bytes);
         if (thisNegative != otherNegative) {
             return thisNegative then smaller else larger;
         }
@@ -137,9 +137,9 @@ shared final class WholeImpl(Integer|String|[Byte+] number) satisfies Whole {
     
     unit = bytes.size == 1 && bytes.first == package.one;
     
-    positive = !bytes.first.get(7) && !zero;
+    positive = !signBit(bytes) && !zero;
     
-    negative = bytes.first.get(7) && !zero;
+    negative = signBit(bytes) && !zero;
     
     fractionalPart => WholeImpl([package.zero]);
     
@@ -238,11 +238,13 @@ shared Integer binaryToInteger(Byte[] bytes) {
     return 0;
 }
 
+Boolean signBit([Byte+] bytes) => bytes.first.get(7);
+
 [Byte+] addMSBIfNeeded(Comparison comparisonToZero, [Byte+] bytes) {
-    if (comparisonToZero == larger && bytes.first.get(7)) {
+    if (comparisonToZero == larger && signBit(bytes)) {
         return [zero].append(bytes);
     }
-    if (comparisonToZero == smaller && !bytes.first.get(7)) {
+    if (comparisonToZero == smaller && !signBit(bytes)) {
         return [ff].append(bytes);
     }
     return bytes;
@@ -338,7 +340,7 @@ Byte flipBits(Byte byte) {
 [Byte+] pad([Byte+] bytes, Integer length) {
     value diff = length - bytes.size;
     if (diff > 0) {
-        value result = [bytes.first.get(7) then ff else zero].repeat(diff).append(bytes);
+        value result = [signBit(bytes) then ff else zero].repeat(diff).append(bytes);
         assert(is [Byte+] result); // repeat causes type-loss
         return result;
     } else {
