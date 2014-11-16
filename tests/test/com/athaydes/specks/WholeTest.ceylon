@@ -8,7 +8,10 @@ import com.athaydes.specks {
     Specification,
     binaryAdd,
     toBinary,
-    feature
+    feature,
+    stringToBinary,
+    Whole,
+    WholeImpl
 }
 import com.athaydes.specks.assertion {
     expect
@@ -17,7 +20,8 @@ import com.athaydes.specks.matcher {
     toBe,
     equalTo,
     to,
-    containSameAs
+    containSameAs,
+    identicalTo
 }
 
 [Integer+] toIntArray([Byte+] bytes)
@@ -83,6 +87,19 @@ import com.athaydes.specks.matcher {
     
 };
 
+{[String, [Integer+]]+} tableOfStringsWithByteArrays = {
+    ["0", toIntArray([Byte(0)])],
+    // 2^64
+    ["18446744073709551616", toIntArray([Byte(0), Byte($1000_0000), Byte(0), Byte(0), Byte(0), Byte(0), Byte(0), Byte(0), Byte(0)])],
+    // 2^65
+    ["36893488147419103232", toIntArray([Byte(1), Byte(0), Byte(0), Byte(0), Byte(0), Byte(0), Byte(0), Byte(0), Byte(0)])]
+};
+
+
+shared void run1() {
+    variable Integer prev = 0;
+    (3..30).collect((i) { value b = 10^i; print(prev > b then "OVERFLOW at ``i``" else toBinary(b)); return prev = b; } );    
+}
 
 testExecutor(`class SpecksTestExecutor`)
 class WholeTest() {
@@ -99,6 +116,109 @@ class WholeTest() {
                
             ([Byte+] result, [Integer+] expected)
                     => expect(toIntArray(result), to(containSameAs(expected)))
+        }
+    };
+    
+    test shared Specification stringToBinarySpeck() => Specification {
+        feature {
+            description = "stringToBinary must convert String to an array of Bytes in two's complement notation";
+            
+            when(String|Integer input, [Integer+] expected)
+                    => [stringToBinary(input.string), expected];
+            
+            examples = tableOfIntegersWithByteArrays.chain(tableOfStringsWithByteArrays);
+            
+            ([Byte+] result, [Integer+] expected)
+                    => expect(toIntArray(result), to(containSameAs(expected)))
+        }
+    };
+    
+    test shared Specification compareSpeck() => Specification {
+        feature {
+            description = "Comparison should work as in numbers";
+            
+            when(Whole w1, Whole w2, Comparison expected)
+                    => [w1.compare(w2), expected];
+            
+            examples = [
+                [WholeImpl(1), WholeImpl(1), equal],
+                [WholeImpl(1k), WholeImpl(1k), equal],
+                [WholeImpl(1k), WholeImpl(1k), equal],
+                [WholeImpl(0), WholeImpl(1), smaller],
+                [WholeImpl(1), WholeImpl(2), smaller],
+                [WholeImpl(10M), WholeImpl(100M), smaller],
+                [WholeImpl(1), WholeImpl(0), larger],
+                [WholeImpl(2), WholeImpl(1), larger],
+                [WholeImpl(20M), WholeImpl(10M), larger],
+                [WholeImpl(987654321), WholeImpl(8765432100), smaller],
+                [WholeImpl(7^9), WholeImpl(7^8), larger],
+                
+                [WholeImpl(-1), WholeImpl(-1), equal],
+                [WholeImpl(-1k), WholeImpl(-1k), equal],
+                [WholeImpl(-1k), WholeImpl(-1k), equal],
+                [WholeImpl(0), WholeImpl(-1), larger],
+                [WholeImpl(-1), WholeImpl(-2), larger],
+                [WholeImpl(-10M), WholeImpl(-100M), larger],
+                [WholeImpl(-1), WholeImpl(0), smaller],
+                [WholeImpl(-2), WholeImpl(-1), smaller],
+                [WholeImpl(-20M), WholeImpl(-10M), smaller],
+                [WholeImpl(-987654321), WholeImpl(-8765432100), larger],
+                [WholeImpl(-(7^9)), WholeImpl(-(7^8)), smaller]
+            ];
+            
+            (Comparison result, Comparison expected)
+                    => expect(result, toBe(identicalTo(expected)))
+        }
+    };
+    
+    test shared Specification plusSpeck() => Specification {
+        feature {
+            description = "+ should work as in numbers";
+            
+            when(Whole w1, Whole w2, Whole expected)
+                    => [w1 + w2, expected];
+            
+            examples = [
+                // positive numbers
+                [WholeImpl(0), WholeImpl(0), WholeImpl(0)],
+                [WholeImpl(1), WholeImpl(0), WholeImpl(1)],
+                [WholeImpl(0), WholeImpl(1), WholeImpl(1)],
+                [WholeImpl(1), WholeImpl(1), WholeImpl(2)],
+                [WholeImpl(2), WholeImpl(2), WholeImpl(4)],
+                [WholeImpl(100), WholeImpl(0), WholeImpl(100)],
+                [WholeImpl(100), WholeImpl(1), WholeImpl(101)],
+                [WholeImpl(127), WholeImpl(1), WholeImpl(128)],
+                [WholeImpl(1), WholeImpl(127), WholeImpl(128)],
+                [WholeImpl(127), WholeImpl(127), WholeImpl(127 * 2)],
+                [WholeImpl(1M), WholeImpl(1), WholeImpl(1M + 1)],
+                [WholeImpl(1), WholeImpl(1M), WholeImpl(1M + 1)],
+                // negative numbers
+                [WholeImpl(-1), WholeImpl(0), WholeImpl(-1)],
+                [WholeImpl(0), WholeImpl(-1), WholeImpl(-1)],
+                [WholeImpl(-1), WholeImpl(-1), WholeImpl(-2)],
+                [WholeImpl(-2), WholeImpl(-2), WholeImpl(-4)],
+                [WholeImpl(-100), WholeImpl(0), WholeImpl(-100)],
+                [WholeImpl(-100), WholeImpl(-1), WholeImpl(-101)],
+                [WholeImpl(-127), WholeImpl(-1), WholeImpl(-128)],
+                [WholeImpl(-1), WholeImpl(-127), WholeImpl(-128)],
+                [WholeImpl(-127), WholeImpl(-127), WholeImpl(-127 * 2)],
+                [WholeImpl(-1M), WholeImpl(-1), WholeImpl(-1M - 1)],
+                [WholeImpl(-1), WholeImpl(-1M), WholeImpl(-1M - 1)],
+                // positive and negative numbers
+                [WholeImpl(-1), WholeImpl(1), WholeImpl(0)],
+                [WholeImpl(1), WholeImpl(-1), WholeImpl(0)],
+                [WholeImpl(-2), WholeImpl(2), WholeImpl(0)],
+                [WholeImpl(-100), WholeImpl(0), WholeImpl(-100)],
+                [WholeImpl(100), WholeImpl(-1), WholeImpl(99)],
+                [WholeImpl(-127), WholeImpl(1), WholeImpl(-126)],
+                [WholeImpl(1), WholeImpl(-128), WholeImpl(-127)],
+                [WholeImpl(127), WholeImpl(-128), WholeImpl(-1)],
+                [WholeImpl(1M), WholeImpl(-1), WholeImpl(1M - 1)],
+                [WholeImpl(1), WholeImpl(-1M), WholeImpl(1 - 1M)]
+            ];
+            
+            (Whole result , Whole expected)
+                    => expect(result, toBe(equalTo(expected)))
         }
     };
     
