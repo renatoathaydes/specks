@@ -6,10 +6,8 @@ import ceylon.test {
 import com.athaydes.specks {
     SpecksTestExecutor,
     Specification,
-    binaryAdd,
     toBinary,
     feature,
-    stringToBinary,
     Whole,
     WholeImpl
 }
@@ -119,19 +117,19 @@ class WholeTest() {
         }
     };
     
-    test shared Specification stringToBinarySpeck() => Specification {
-        feature {
-            description = "stringToBinary must convert String to an array of Bytes in two's complement notation";
-            
-            when(String|Integer input, [Integer+] expected)
-                    => [stringToBinary(input.string), expected];
-            
-            examples = tableOfIntegersWithByteArrays.chain(tableOfStringsWithByteArrays);
-            
-            ([Byte+] result, [Integer+] expected)
-                    => expect(toIntArray(result), to(containSameAs(expected)))
-        }
-    };
+    //test shared Specification stringToBinarySpeck() => Specification {
+    //    feature {
+    //        description = "stringToBinary must convert String to an array of Bytes in two's complement notation";
+    //        
+    //        when(String|Integer input, [Integer+] expected)
+    //                => [stringToBinary(input.string), expected];
+    //        
+    //        examples = tableOfIntegersWithByteArrays.chain(tableOfStringsWithByteArrays);
+    //        
+    //        ([Byte+] result, [Integer+] expected)
+    //                => expect(toIntArray(result), to(containSameAs(expected)))
+    //    }
+    //};
     
     test shared Specification compareSpeck() => Specification {
         feature {
@@ -222,16 +220,46 @@ class WholeTest() {
         }
     };
     
-    test shared Specification binaryAddSpecification() => Specification {
+    test shared Specification positiveSpeck() => Specification {
         feature {
-            description = "binary addition to be implemented correctly";
-            examples = [[0, 0], [1, 0], [0, 1], [100, 27]];
+            examples = [
+                [0, false], [-1, false], [-128, false], [-127, false], [-1M, false],
+                [1, true], [2, true], [127, true], [128, true], [1M, true]
+            ];
+
+            when(Integer n, Boolean expected) => [WholeImpl(n).positive, expected];
             
-            when(Integer a, Integer b)
-                    => [a, b, binaryAdd(Byte(a), Byte(b)).signed];
+            (Boolean result, Boolean expected)
+                    => expect(result, toBe(identicalTo(expected)))
+        }
+    };
+
+    test shared Specification negativeSpeck() => Specification {
+        feature {
+            examples = [
+                [0, false], [-1, true], [-128, true], [-127, true], [-1M, true],
+                [1, false], [2, false], [127, false], [128, false], [1M, false]
+            ];
             
-            (Integer a, Integer b, Integer result)
-                    => expect(result, toBe(equalTo(a + b)))
+            when(Integer n, Boolean expected) => [WholeImpl(n).negative, expected];
+            
+            (Boolean result, Boolean expected)
+                    => expect(result, toBe(identicalTo(expected)))
+        }
+    };
+    
+    test shared Specification negateSpeck() => Specification {
+        feature {
+            examples = [
+                [0, 0], [-1, 1], [-129, 129], [-128, 128], [-255, 255], [-256, 256], [-127, 127], [-1M, 1M],
+                [1, -1], [2, -2], [127, -127], [128, -128], [255, -255], [256, -256], [257, -257], [1M, -1M]
+            ];
+            
+            when(Integer n, Integer expected)
+                    => [WholeImpl(n).negated, WholeImpl(expected)];
+            
+            (Whole result, Whole expected)
+                    => expect(result, toBe(equalTo(expected)))
         }
     };
     

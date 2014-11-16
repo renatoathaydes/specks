@@ -66,50 +66,6 @@ shared final class WholeImpl(Integer|String|[Byte+] number) satisfies Whole {
         bytes = number;
     }
     
-    Result traverseBits<Result>([Byte+] thisBytes, [Byte+] otherBytes,
-        Result? processBit(Boolean thisBit,Boolean otherBit),
-        Result defaultResult)
-            given Result satisfies Object {
-        for (thisByte -> otherByte in zipEntries(thisBytes, otherBytes)) {
-            for (bitIndex in 7..0) {
-                value result = processBit(thisByte.get(bitIndex), otherByte.get(bitIndex));
-                if (exists result) {
-                    return result;
-                }
-            }
-        }
-        return defaultResult;
-    }
-    
-    Result traverseBitsReversed<Result>([Byte+] thisBytes, [Byte+] otherBytes,
-        Result? processBit(Boolean thisBit,Boolean otherBit),
-        Result defaultResult)
-            given Result satisfies Object {
-        for (thisByte -> otherByte in zipEntries(thisBytes.reversed, otherBytes.reversed)) {
-            for (bitIndex in 0..7) {
-                value result = processBit(thisByte.get(bitIndex), otherByte.get(bitIndex));
-                if (exists result) {
-                    return result;
-                }
-            }
-        }
-        return defaultResult;
-    }
-    
-    Result? nullIf<Result>(Result nullValue)(Result result)
-            given Result satisfies Object {
-        if (result == nullValue) {
-            return null;
-        }
-        return result;
-    }
-
-    "Assumes bytes have the same length and both numbers are positive"
-    Comparison compareBytes([Byte+] thisBytes, [Byte+] otherBytes) {
-        assert(thisBytes.size == otherBytes.size);
-        return traverseBits(thisBytes, otherBytes, compose(nullIf(equal), compareBits), equal);
-    }
-
     shared actual Comparison compare(Whole other) {
         assert(is WholeImpl other);
         value thisNegative = this.bytes.first.get(7);
@@ -173,13 +129,21 @@ shared final class WholeImpl(Integer|String|[Byte+] number) satisfies Whole {
     shared actual Whole plusInteger(Integer integer)
             => plus(WholeImpl(integer));
     
-    shared actual Whole divided(Whole other) => nothing;
+    shared actual Whole divided(Whole other) {
+        return nothing;
+    }
+
+    zero = bytes.size == 1 && bytes.first == package.zero;
     
-    shared actual Whole fractionalPart => WholeImpl([package.zero]);
+    unit = bytes.size == 1 && bytes.first == package.one;
     
-    shared actual Object? implementation => null;
+    positive = !bytes.first.get(7) && !zero;
     
-    shared actual Boolean positive = !bytes.first.get(7);
+    negative = bytes.first.get(7) && !zero;
+    
+    fractionalPart => WholeImpl([package.zero]);
+    
+    implementation = null;
     
     shared actual Integer integer => nothing;
     
@@ -191,9 +155,7 @@ shared final class WholeImpl(Integer|String|[Byte+] number) satisfies Whole {
         }
     }
     
-    shared actual Whole negated => nothing;
-    
-    shared actual Boolean negative = bytes.first.get(7);
+    negated => WholeImpl(bytes.collect(flipBits)) + WholeImpl([one]);
     
     shared actual Whole neighbour(Integer offset) => nothing;
     
@@ -213,14 +175,54 @@ shared final class WholeImpl(Integer|String|[Byte+] number) satisfies Whole {
     shared actual Whole timesInteger(Integer integer)
             => times(WholeImpl(integer));
     
-    shared actual Boolean unit = bytes.size == 1 && bytes.first == package.one;
-    
     shared actual Whole wholePart => WholeImpl(bytes);
-    
-    shared actual Boolean zero = bytes.size == 1 && bytes.first == package.zero;
     
     string = bytes.string;
     
+}
+
+Result? nullIf<Result>(Result nullValue)(Result result)
+        given Result satisfies Object {
+    if (result == nullValue) {
+        return null;
+    }
+    return result;
+}
+
+Result traverseBits<Result>([Byte+] thisBytes, [Byte+] otherBytes,
+    Result? processBit(Boolean thisBit,Boolean otherBit),
+    Result defaultResult)
+        given Result satisfies Object {
+    for (thisByte -> otherByte in zipEntries(thisBytes, otherBytes)) {
+        for (bitIndex in 7..0) {
+            value result = processBit(thisByte.get(bitIndex), otherByte.get(bitIndex));
+            if (exists result) {
+                return result;
+            }
+        }
+    }
+    return defaultResult;
+}
+
+Result traverseBitsReversed<Result>([Byte+] thisBytes, [Byte+] otherBytes,
+    Result? processBit(Boolean thisBit,Boolean otherBit),
+    Result defaultResult)
+        given Result satisfies Object {
+    for (thisByte -> otherByte in zipEntries(thisBytes.reversed, otherBytes.reversed)) {
+        for (bitIndex in 0..7) {
+            value result = processBit(thisByte.get(bitIndex), otherByte.get(bitIndex));
+            if (exists result) {
+                return result;
+            }
+        }
+    }
+    return defaultResult;
+}
+
+"Assumes bytes have the same length and both numbers are positive"
+Comparison compareBytes([Byte+] thisBytes, [Byte+] otherBytes) {
+    assert(thisBytes.size == otherBytes.size);
+    return traverseBits(thisBytes, otherBytes, compose(nullIf(equal), compareBits), equal);
 }
 
 shared Integer binaryToInteger(Byte[] bytes) {
@@ -237,10 +239,10 @@ shared Integer binaryToInteger(Byte[] bytes) {
 }
 
 [Byte+] addMSBIfNeeded(Comparison comparisonToZero, [Byte+] bytes) {
-    if (comparisonToZero == larger && bytes.first.rightLogicalShift(7) == one) {
+    if (comparisonToZero == larger && bytes.first.get(7)) {
         return [zero].append(bytes);
     }
-    if (comparisonToZero == smaller && bytes.first.rightLogicalShift(7) == zero) {
+    if (comparisonToZero == smaller && !bytes.first.get(7)) {
         return [ff].append(bytes);
     }
     return bytes;
@@ -328,6 +330,10 @@ Comparison compareBits(Boolean bit1, Boolean bit2) {
     }
 }
 
+Byte flipBits(Byte byte) {
+    return ff - byte;
+}
+
 "Pads the byte to the given length, using the value of the first bit of bytes."
 [Byte+] pad([Byte+] bytes, Integer length) {
     value diff = length - bytes.size;
@@ -338,8 +344,4 @@ Comparison compareBits(Boolean bit1, Boolean bit2) {
     } else {
         return bytes;
     }
-}
-
-shared Byte binaryAdd(Byte a, Byte b) {
-    return a + b;
 }
