@@ -1,6 +1,5 @@
 import com.athaydes.specks.assertion {
     AssertionResult,
-    assertionSuccess,
     AssertionFailure
 }
 
@@ -19,9 +18,10 @@ shared alias SpecResult => SpecFailure|SpecSuccess;
 shared SpecSuccess success = null;
 
 "Most generic kind of block which forms a [[Specification]]."
-shared sealed interface Block {
+shared sealed
+interface Block {
     shared formal String description;
-    shared formal {{SpecResult*}*} runTests();
+    shared formal {SpecResult*} runTests();
 }
 
 "Top-level representation of a Specification in **specks**."
@@ -36,12 +36,11 @@ shared class Specification(
     
     "Run this [[Specification]]. This method is called by **specks** to run this Specification
      and usually users do not need to call it directly."
-    shared {{SpecResult*}*}[] run() => blocks.collect(results);
-    
+    shared {SpecResult*}[] run() => blocks.collect(results);
 }
 
-{{SpecResult*}*} assertSpecResultsExist({{SpecResult*}*} result) {
-    if (result.empty || result.every((it) => it.empty)) {
+{SpecResult*} assertSpecResultsExist(SpecResult[] result) {
+    if (result.empty) {
         throw Exception("Did not find any tests to run.");
     }
     return result;
@@ -50,16 +49,15 @@ shared class Specification(
 SpecResult specResult(AssertionResult() applyAssertion, String description, Anything[] where) {
     try {
         value result = applyAssertion();
-        switch(result)
+        switch (result)
         case (is AssertionFailure) {
             value whereString = where.empty then "" else " ``where``";
             return "``description`` failed: ``result````whereString``";
         }
-        case(assertionSuccess) {
-            return success;    
-        }    
-    } catch(Throwable t) {
-        t.printStackTrace();
+        case (is Null) {
+            return success;
+        }
+    } catch (Throwable t) {
         return Exception(t.message, t);
     }
 }
@@ -67,22 +65,18 @@ SpecResult specResult(AssertionResult() applyAssertion, String description, Anyt
 String blockDescription(String blockName, String simpleDescription)
         => blockName + (simpleDescription.empty then "" else " '``simpleDescription``'");
 
-
 Block assertionsWithoutExamplesBlock<Result>(
     String internalDescription,
-    AssertionResult()(Callable<AssertionResult, Result>) apply,
+    AssertionResult()(Callable<AssertionResult,Result>) apply,
     "Assertions to verify the result of running the 'when' function."
-    {Callable<AssertionResult, Result>+} assertions)
-            given Result satisfies Anything[] {
-
-    object block satisfies Block {
+    {Callable<AssertionResult,Result>+} assertions)
+        given Result satisfies Anything[] {
+    
+    return object satisfies Block {
         description = internalDescription;
         
-        runTests() => assertSpecResultsExist([assertions.collect((assertion)
-            => specResult(apply(assertion), description, []))]);
-    }
-
-    return block;
+        runTests() => assertSpecResultsExist(assertions.collect((assertion) => specResult(apply(assertion), description, [])));
+    };
 }
 
 Block assertionsWithExamplesBlock<Where>(
@@ -91,36 +85,25 @@ Block assertionsWithExamplesBlock<Where>(
     {Where*} examples)
         given Where satisfies Anything[] {
     
-    SpecResult[] safeApplyAll(
-        AssertionResult(Where) when,
-        String description,
-        {Where*} examples) {
-        
-        AssertionResult() applyExample(Where example)
-                => () => when(example);
-        
-        return examples.collect((example)
-            => specResult(applyExample(example), description, example));
-    }
+    SpecResult[] applyExamples(AssertionResult(Where) when)
+            => examples.collect((example) => specResult(() => when(example),
+                internalDescription, example));
     
-    object block satisfies Block {
+    return object satisfies Block {
         description = internalDescription;
         
-        runTests() => assertSpecResultsExist(assertions.collect((assertion)
-            => safeApplyAll(assertion, description, examples)));
+        runTests() => assertSpecResultsExist(assertions.flatMap(applyExamples).sequence());
         
-        string = "[``description`` - ``assertions.size`` assertions, ``examples.size`` examples]";   
-    }
-    
-    return block;
+        string = "[``description`` - ``assertions.size`` assertions, ``examples.size`` examples]";
+    };
 }
 
 "A feature block allows the description of how a software functionality is expected to work."
-shared Block feature<out Where = [], in Result = Where>(
+shared Block feature<out Where = [],in Result = Where>(
     "The action being tested in this feature."
-    Callable<Result, Where> when,
+    Callable<Result,Where> when,
     "Assertions to verify the result of running the 'when' function."
-    {Callable<AssertionResult, Result>+} assertions,
+    {Callable<AssertionResult,Result>+} assertions,
     "Description of this feature."
     String description = "",
     "Input examples.<p/>
@@ -132,22 +115,19 @@ shared Block feature<out Where = [], in Result = Where>(
     value internalDescription = blockDescription("Feature", description);
     
     if (examples.empty) {
-        print("No examples!");
         "If you do not provide any examples, your 'when' function must not take any parameters."
-        assert(is Callable<Result, []> when);
-        print("when takes no params");
+        assert (is Callable<Result,[]> when);
         return assertionsWithoutExamplesBlock(internalDescription,
-            (Callable<AssertionResult, Result> assertion) => ()
-                    => assertion(*when()), assertions);
+            (Callable<AssertionResult,Result> assertion) => () => assertion(*when()), assertions);
     } else {
-        return assertionsWithExamplesBlock(internalDescription, assertions.collect((assertion)
-            => (Where example) => assertion(*when(*example))), examples);    
+        return assertionsWithExamplesBlock(internalDescription,
+            assertions.collect((assertion) => (Where example) => assertion(*when(*example))), examples);
     }
 }
 
 shared Block errorCheck<Where = []>(
     "The action being tested in this feature."
-    Callable<Anything, Where> when,
+    Callable<Anything,Where> when,
     {AssertionResult(Throwable?)+} assertions,
     String description = "",
     "Input examples.<p/>
@@ -155,33 +135,27 @@ shared Block errorCheck<Where = []>(
     {Where*} examples = [])
         given Where satisfies Anything[] {
     
-    AssertionResult applyAssertionToExample(AssertionResult(Throwable?) assertion)(Where example) {
-        try {
-            when(*example);
-            return assertion(null);
-        } catch (Throwable t) {
-            return assertion(t);
-        }
-    }
-    
     AssertionResult() applyAssertion(Anything() when)(AssertionResult(Throwable?) assertion) {
         try {
             when();
-            return () => assertion(null);
+            return () => assertion(success);
         } catch (Throwable t) {
             return () => assertion(t);
         }
     }
     
+    AssertionResult applyAssertionToExample(AssertionResult(Throwable?) assertion)(Where example)
+            => applyAssertion(() => when(*example))(assertion)();
+    
     value internalDescription = blockDescription("ErrorCheck", description);
     
     if (examples.empty) {
         "If you do not provide any examples, your 'when' function must not take any parameters."
-        assert(is Callable<Anything, []> when);
+        assert (is Callable<Anything,[]> when);
         return assertionsWithoutExamplesBlock(internalDescription, applyAssertion(when), assertions);
     } else {
-        return assertionsWithExamplesBlock(internalDescription, assertions.collect((assertion)
-            => applyAssertionToExample(assertion)), examples);    
+        return assertionsWithExamplesBlock(internalDescription, assertions.collect(
+                (assertion) => applyAssertionToExample(assertion)), examples);
     }
+    
 }
-

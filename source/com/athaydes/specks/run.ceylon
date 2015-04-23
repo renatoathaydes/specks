@@ -1,103 +1,116 @@
+import com.athaydes.specks.assertion {
+    expect,
+    expectCondition,
+    AssertionResult,
+    expectToThrow
+}
+import com.athaydes.specks.matcher {
+    equalTo,
+    Matcher,
+    containEvery,
+    to
+}
 
 
 
 "Run the module `com.athaydes.specks`."
 shared void run() {
-    void show(Integer i) {
-        print("``i`` -> " + toBinary(i).string);
-    }
     
-    for (i in -2..2) {
-        show(i);
-    }
-    
-    show(-129);
-    show(-128);
-    show(-127);
-    show(-126);
-    show(126);
-    show(127);
-    show(128);
-    
-    /*
     void myFunction(Integer i, Integer j) {
         if (i <= 0 || j <= 0) {
             throw Exception();
         }
     }
     
+    "Example custom matcher"
+    function sorted<Item>(Boolean ascending) 
+            given Item satisfies Comparable<Item>
+            => object satisfies Matcher<{Item*}> {
+        
+        value compare = ascending
+                then ((Item i, Item prev) => i <= prev)
+                else ((Item i, Item prev) => i > prev);
+        
+        shared actual AssertionResult matches({Item*} actual) {
+            if (is {Item+} actual, actual.size > 1) {
+                variable value prev = actual.first;
+                for (pair in zipPairs(1..actual.size, actual.rest)) {
+                    value [index, item] = pair;
+                    if (compare(item, prev)) {
+                        return "Not sorted at index ``index``: [``item``]";
+                    }
+                    prev = item;
+                }
+            }
+            return success;
+        }
+    };
+    
     [Specification {
-        ExpectAll {
-            "== operator should be symmetric";
-            { ["a", "a"], ["", ""] };
-            (String s1, String s2) => s1 == s2,
-            (String s1, String s2) => s2 == s1
+        feature {
+            description = "== operator should be symmetric";
+            examples = { ["a", "a"], ["", ""] };
+            when(String s1, String s2) => [s1, s2];
+            (String s1, String s2) => expect(s1, equalTo(s2))(),
+            (String s1, String s2) => expect(s2, equalTo(s1))()
         }
     },
     Specification {
-        Expect {
-            "Ceylon operators to work";
-            () => 2 + 2 == 4,
-            () => 2 < 4
+        feature {
+            description = "Ceylon operators to work";
+            when() => [];
+            () => expectCondition(2 + 2 == 4),
+            () => expectCondition(2 < 4)
         },
-        Expect {
-            "Ceylon operators to work";
-            equal -> [2 + 2, 4],
-            smaller -> [2, 4]
+        feature {
+            description = "Bad expressions to fail";
+            when() => [];
+            () => expectCondition(2 + 2 == 8),
+            () => expectCondition(2 > 4)
         },
-        Expect {
-            "Ceylon operators to work";
-            () => 2 + 2 == 4,
-            equal -> [2 + 2, 4]
-        },
-        Expect {
-            "Bad expressions to fail";
-            () => 2 + 2 == 8,
-            equal -> [2 + 2, 8]
-        },
-        ExpectAll {
-            "More examples";
+        feature {
+            description = "More examples";
+            when(Integer a, Integer b) => [a, b];
             examples = { [1, 2], [5, 10], [25, 50] };
-            (Integer a, Integer b) => 2 * a == b
+            (Integer a, Integer b) => expect(2 * a, equalTo(b))()
         },
-        ExpectAll {
-            "Using generated examples";
+        feature {
+            description = "Using generated examples";
             examples = { generateIntegers().sequence() };
-            (Integer* ints) => sort(ints) == ints
+            when(Integer* ints) => sort(ints);
+            (Integer* ints) => expect(ints, sorted<Integer>(true))()
         },
-        ExpectToThrow {
-            `Exception`;
-            "when we call throw";
-            void() { throw; }
+        errorCheck {
+            description = "when we call throw";
+            function when() { throw; }
+            expectToThrow(`Exception`)
         },
-        ExpectAllToThrow {
-            `Exception`;
-            "when not given at least one positive integer";
-            { [-4, 0], [0, -1], [-2, -3], [0, 0] };
-            myFunction,
-            void(Integer i, Integer j) {
-                if (i <= 0 || j <= 0) {
-                    throw Exception("Not given a positive integer");
-                }
-            }
+        errorCheck {
+            description = "Error when not given at least one positive integer";
+            examples = { [-4, 0], [0, -1], [-2, -3], [0, 0] };
+            when = myFunction;
+            expectToThrow(`Exception`)
         }
     }, Specification {
-        Expect {
-            "Ceylon [*].first should return either the first element or null for empty Sequences";
-            function() {
-                String? first = [].first;
-                return first is Null;
-            },
-            equal -> { [1].first, 1 },
-            equal -> { [5, 4, 3, 2, 1, 0].first, 5 },
-            equal -> { [1, 2, 3].first, 1 }
+        feature {
+            description = "Ceylon [*].first should return either the first element or null for empty Sequences";
+            when() => [];
+            expect([1].first, equalTo(1)),
+            expect([5, 4, 3, 2, 1, 0].first, equalTo(5)),
+            expect([1, 2, 3].first, equalTo(1))
         },
-        Expect {
-            "Ceylon [*].first to work with String[]";
-            equal -> { ["A"].first, "A" },
-            equal -> { ["B", "C", "D"].first, "B" }
+        feature {
+            description = "Ceylon [*].first to work with String[]";
+            when() => [];
+            expect(["A"].first, equalTo("A")),
+            expect(["B", "C", "D"].first, equalTo("B"))
+        },
+        feature {
+            description = "";
+            when() => [];
+            expect(1..10, to(containEvery(1..10)))
         }
     }
     ].collect((Specification speck) => print(speck.run()));
-    */
+    
 }

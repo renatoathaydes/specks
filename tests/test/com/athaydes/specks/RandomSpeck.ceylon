@@ -4,49 +4,48 @@ import ceylon.collection {
     Hashtable
 }
 import ceylon.test {
-    test,
-    testExecutor
+    testExecutor,
+    test
 }
 
 import com.athaydes.specks {
     SpecksTestExecutor,
     Specification,
-    Random,
-    scale,
     feature,
-    errorCheck
+    randomIntegers,
+    success
 }
 import com.athaydes.specks.assertion {
     expect,
-    expectToThrow
+    AssertionResult
 }
 import com.athaydes.specks.matcher {
     toBe,
-    equalTo,
-    identicalTo,
     largerThan,
-    smallerThan
+    smallerThan,
+    containEvery,
+    to
 }
 
-[Integer[]+] partition({Integer+} ints, Integer partitionsCount, variable Integer low, Integer step) {
-    variable value high = low + step;
+[Integer[]+] partition({Integer*} ints, Integer partitionsCount, variable Integer low, Integer partitionWidth) {
+    variable value high = low + partitionWidth;
     value partitions = (1..partitionsCount).collect((_) {
-        value p = ints.select((element) => low <= element < high);
-        low += step;
-        high += step;   
-        return p; 
-    });
+            value part = ints.select((element) => low <= element < high);
+            low += partitionWidth;
+            high += partitionWidth;
+            return part;
+        });
     return partitions;
 }
 
 Value nonNull<Value>(Value? val)
         given Value satisfies Object {
-    assert(exists val);
+    assert (exists val);
     return val;
 }
 
-Boolean naturalDistribution({Integer+} ints) {
-    value partitions = partition(ints, 16, -2 * (2^52), 2^50);
+AssertionResult naturalDistribution({Integer*} ints, Integer min = -(2 ^ 53), Integer partitionWidth = 2 ^ 50) {
+    value partitions = partition(ints, 16, min, partitionWidth);
     
     variable Integer left = 0;
     variable Integer right = partitions.size - 1;
@@ -55,123 +54,84 @@ Boolean naturalDistribution({Integer+} ints) {
         value rightPartitionSize = nonNull(partitions[right]?.size).float;
         value leftPartitionSize = nonNull(partitions[left]?.size).float;
         
-        if (rightPartitionSize < 0.9 * leftPartitionSize ||
-            rightPartitionSize > 1.1 * leftPartitionSize) {
-            print("Natural distribution - FAIL: Partitions not naturally distributed: ``partitions.map((it) => it.size)``");
-            return false;
+        if (rightPartitionSize < 0.9*leftPartitionSize ||
+                    rightPartitionSize > 1.1*leftPartitionSize) {
+            return "Natural distribution - FAIL: Partitions not naturally distributed: ``partitions.map((it) => it.size)``";
         }
         left++;
         right--;
     }
-    if (sum(partitions*.size) != ints.size) {
-        print("Natural distribution - FAIL: Not all samples fall into expected range");
-        return false;
+    
+    value partitionsItems = sum(partitions*.size);
+    if (partitionsItems != ints.size) {
+        return "Natural distribution - FAIL: Expected ``ints.size`` total integers in all partitions but found ``partitionsItems``";
     }
-    return true;
+    return success;
 }
 
-Boolean uniformDistribution({Integer+} ints) {
-    value partitions = partition(ints, 8, -(2^52), 2^50);
+AssertionResult uniformDistribution({Integer*} ints, Integer min = -2^52, Integer width = 2^48) {
+    value partitions = partition(ints, 16, min, width);
     
-    value minPartitionSize = 0.9 * partitions.first.size;
-    value maxPartitionSize = 1.1 * partitions.first.size;
+    value tolerance = 0.05;
+    value minPartitionSize = (1.0 - tolerance) * partitions.first.size;
+    value maxPartitionSize = (1.0 + tolerance) * partitions.first.size;
     
     for (partition in partitions.rest) {
-        if (partition.size.float < minPartitionSize ||
-            partition.size.float > maxPartitionSize) {
-            print("Uniform distribution - FAIL: Partitions not uniformly distributed: ``partitions.map((it) => it.size)``");
-            return false;
+        if (partition.size.float<minPartitionSize ||
+                    partition.size.float>maxPartitionSize) {
+            return "Uniform distribution - FAIL: Partitions not uniformly distributed: ``partitions.map((it) => it.size)``";
         }
     }
-    if (sum(partitions*.size) != ints.size) {
-        print("Uniform distribution - FAIL: Not all samples fall into expected range");
-        return false;
+    value partitionsItems = sum(partitions*.size);
+    if (partitionsItems != ints.size) {
+        return "Natural distribution - FAIL: Expected ``ints.size`` total integers in all partitions but found ``partitionsItems``";
     }
-    return true;
+    return success;
 }
 
 Integer uniqueElements(Object[] elements) {
-    value set = HashSet(unlinked, Hashtable((elements.size/0.75).integer+1), elements);
+    value set = HashSet(unlinked, Hashtable((elements.size / 0.75).integer + 1), elements);
     return set.size;
 }
 
-
-{Integer+} successiveDiff({Integer+} ints) {
-    variable value prev = ints.first;
-    value result = ints.rest.map((it) { value result = it - prev; prev = it; return result; });
-    assert(is {Integer+} result);
-    return result;
+{Integer*} successiveDiff({Integer*} ints) {
+    if (exists first = ints.first) {
+        variable value prev = first;
+        return ints.rest.map((it) {
+            value result = it - prev;
+            prev = it;
+            return result;
+        });    
+    } else {
+        return empty;
+    }
 }
 
-testExecutor(`class SpecksTestExecutor`)
+testExecutor (`class SpecksTestExecutor`)
 class RandomSpeck() {
-    
-    value random = Random();
-    
-    function randomIntegers(Integer count, Integer(Integer) scale = (Integer int) => int) 
-            => (1..count).collect((_) => scale(random.nextInteger()));
-    
-    // should mirror the value used in Random
-    Integer maxInt = 2^52;
-    
-    shared test Specification scaleSpeck() => Specification {
+
+    shared test
+    Specification randomIntegersReturnsApparentlyRandomValues() => Specification {
         feature {
-            description = "CeylonDoc examples to be correct";
-            
-            when(Integer i, Integer min, Integer max, Integer expected)
-                    => [scale(i), expected];
-            
-            examples = [[2^52, -10, 10, 10], [-(2^52), -10, 10, -10]];
-            
-            (Integer result, Integer expected)
-                    => expect(scale(0), toBe(equalTo(0))),
-            (Integer result, Integer expected)
-                    => expect(result, toBe(equalTo(expected)))
+            description = "Random integers span the whole range of expected values";
+            when () => randomIntegers(10k, 1, 100).sequence();
+            (Integer* testIntegers) => expect(testIntegers, to(containEvery(1..100)))()
         },
-        feature {
-            description = "Integers can be scaled to within a given range";
-            
-            when(Integer int, Integer min, Integer max, Integer expected) 
-                    => [scale(int, min, max), expected];
-            
-            examples = [
-                [0, -5, 5, 0], [-maxInt, -5, 5, -5], [maxInt, -5, 5, 5], 
-                [-maxInt/2, -6, 6, -3], [maxInt/2, -6, 6, 3],
-                [-maxInt/3, -6, 6, -2], [maxInt/3, -6, 6, 1],
-                [5, 5, 5, 5], [0, -10, -10, -10]];
-            
-            (Integer result, Integer expected)
-                    => expect(result, toBe(equalTo(expected)))
-        },
-        errorCheck {
-            description = "If maximum < minimum";
-            examples = [[10, 0], [-1, -2], [100, 10]];
-            when(Integer min, Integer max) => scale(0, min, max);
-            expectToThrow(`Exception`)
-        }
-    };
-    
-    value testIntegers = randomIntegers(100k);
-    
-    shared test Specification randomIntegersReturnsApparentlyRandomValues() => Specification { 
         feature {
             description = "Random integers are generated with uniform distribution";
-            when() => [];
-            () => expect(uniformDistribution(testIntegers),
-                toBe(identicalTo(true)))
+            when() => randomIntegers(100k, -2^52, 2^52).sequence();
+            (Integer* testIntegers) => uniformDistribution(testIntegers)
         },
         feature {
             description = "The difference between successive values has natural distribution";
-            when() => [];
-            () => expect(naturalDistribution(successiveDiff(testIntegers)),
-                toBe(identicalTo(true)))
+            when() => randomIntegers(100k, -2^52, 2^52).sequence();
+            (Integer* testIntegers) => naturalDistribution(successiveDiff(testIntegers))
         },
         feature {
             description = "Nearly no repitition within a million integers";
-            when() => [];
-            () => expect(uniqueElements(randomIntegers(1M)),
-                toBe(largerThan(1M - 5), smallerThan(1M + 5)))
+            when() => randomIntegers(1M, -2^52, 2^52).sequence();
+            (Integer* testIntegers) => expect(uniqueElements(testIntegers),
+                    toBe(largerThan(1M - 5), smallerThan(1M + 5)))()
         }
     };
-    
 }

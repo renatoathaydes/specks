@@ -51,9 +51,37 @@ shared {Integer+} generateIntegers(
     return IntsIterator(count);
 }
 
+"Generates random Integers."
+throws(`class Exception`, "if count is smaller than 1 or longest < shortest")
+shared {Integer+} randomIntegers(
+    "the number of Integers to generate - must be positive"
+    Integer count = 100,
+    "the lower bound for the Integers generated"
+    Integer lower = 0,
+    "the higher bound for the Integers generated"
+    Integer higher = 100) {
+    
+    value random = Random();
+    
+    if (count < 1) {
+        throw Exception("Count must be positive");
+    }
+    if (higher < lower) {
+        throw Exception("longest must not be smaller than shortest");
+    }
+    
+    function randomInteger() => random.nextInRange(lower, higher + 1);
+    
+    if (count == 1) { return { randomInteger() }; }
+    
+    return GeneratorIterator(count, randomInteger);
+}
+
+
+
 "Generates random Strings."
 throws(`class Exception`, "if count is smaller than 1 or longest < shortest")
-shared {String+} generateStrings(
+shared {String+} randomStrings(
     "the number of Strings to generate - must be positive"
     Integer count = 100,
     "the lower bound for the String size"
@@ -61,9 +89,9 @@ shared {String+} generateStrings(
     "the higher bound for the String size"
     Integer longest = 100,
     "Allowed characters for the returned Strings"
-    [Character+] allowedChars = '\{#20}'..'\{#7E}',
-    "Random instance to use for generating Strings"
-    Random random = Random()) {
+    [Character+] allowedChars = '\{#20}'..'\{#7E}') {
+    
+    value random = Random();
     
     if (count < 1) {
         throw Exception("Count must be positive");
@@ -73,36 +101,36 @@ shared {String+} generateStrings(
     }
     
     function randomString() {
-        value size = scale(random.nextInteger(), max {shortest, 0}, longest);
-        if (size == 0) { return ""; }
-        return String((1..size).collect((_)
-            => allowedChars[scale(random.nextInteger(), 0, allowedChars.size - 1)]).coalesced);
+        value length = random.nextInRange(shortest, longest);
+        return String((1..length).collect((_)
+            => allowedChars[random.nextPositive(allowedChars.size)]).coalesced);
     }
     
     if (count == 1) { return { randomString() }; }
     
-    class StringsIterator(Integer count) satisfies {String+} {
-        
-        variable Integer itemsLeft = count;
-        
-        String|Finished increase() {
-            if (itemsLeft == 0) {
-                return finished;
-            }
-            
-            itemsLeft--;
-            return randomString();
-        }
-        
-        size = count;
-        
-        shared actual Iterator<String> iterator() => iter;
-        
-        object iter satisfies Iterator<String> {
-            shared actual String|Finished next() => increase();
-        }
-    }
-    
-    return StringsIterator(count);
+    return GeneratorIterator(count, randomString);
 }
 
+class GeneratorIterator<Item>(Integer count, Item() generate)
+        satisfies {Item+} {
+    
+    variable Integer itemsLeft = count;
+    
+    Item|Finished increase() {
+        if (itemsLeft == 0) {
+            return finished;
+        }
+        
+        itemsLeft--;
+        return generate();
+    }
+    
+    size = count;
+    
+    shared actual Iterator<Item> iterator() => iter;
+    
+    object iter satisfies Iterator<Item> {
+        shared actual Item|Finished next() => increase();
+    }
+    
+}

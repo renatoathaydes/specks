@@ -16,17 +16,17 @@ import com.athaydes.specks {
 }
 import com.athaydes.specks.assertion {
     expect,
-    AssertionResult,
     expectToThrow,
-    platformIndependentName
+    platformIndependentName,
+    expectCondition
 }
 import com.athaydes.specks.matcher {
     ...
 }
 
 
-[SpecResult*] flatten({{SpecResult*}*}[] specResult) =>
-        [ for (res in specResult) for (row in res) for (col in row) col ];
+[SpecResult*] flatten({SpecResult*}[] specResult) =>
+        [ for (res in specResult) for (row in res) row ];
 
 Boolean throwThis(Exception e) {
     throw e;
@@ -41,14 +41,20 @@ test shared void happySpecificationThatPassesAllTests() {
                     => [a + b, b + a, expected];
 
             (Integer r1, Integer r2, Integer expected)
-                    => expect(r1, toBe(equalTo(r2), equalTo(expected)))
+                    => expect(r1, toBe(equalTo(r2), equalTo(expected)))()
         },
         feature {
             when() => [];
-            () => expect(2 + 2, equalTo(4)),
-            () => expect(3 + 2, equalTo(5)),
-            () => expect(4 + 2, equalTo(6)),
-            () => expect(null, not(to(exist)))
+            expect(2 + 2, equalTo(4)),
+            expect(3 + 2, equalTo(5)),
+            expect(4 + 2, equalTo(6)),
+            expect(null, not(to(exist)))
+        },
+        feature {
+            examples = { [true, false], [false, true] };
+            when(Boolean a, Boolean b) => [a || b];
+            (Boolean orIsTrue) => expectCondition(orIsTrue),
+            (Boolean orIsTrue) => expectCondition(orIsTrue != false)
         },
         errorCheck {
             description = "happy path";
@@ -57,28 +63,28 @@ test shared void happySpecificationThatPassesAllTests() {
             expectToThrow(`Exception`)
         }
     }.run();
-    assertEquals(specResult.size, 3);
-    assertEquals(specResult.collect(({{SpecResult*}*} element) => element.size), [1, 4, 1]);
-
-    assert(flatten(specResult).every((SpecResult result) => equalsCompare(result, success)));
+    
+    assertEquals(specResult.size, 4);
+    assertEquals(specResult.collect((results) => results.size), [3, 4, 4, 2]);
+    assert(flatten(specResult).every((result) => equalsCompare(result, success)));
 }
 
 String asString(SpecResult result) => result?.string else "success";
 
 test shared void featuresShouldFailWithExplanationMessage() {
-    AssertionResult error() {
+    Nothing error() {
         throw;
     }
     value specResult = Specification {
         feature {
             description = "should fail with explanation message";
             when() => [];
-            () => expect(2 + 1, largerThan(4)),
-            () => expect(3 - 2, equalTo(2)),
-            () => expect(5 + 5, smallerThan(9)),
+            expect(2 + 1, largerThan(4)),
+            expect(3 - 2, equalTo(2)),
+            expect(5 + 5, smallerThan(9)),
             error,
-            () => expect(null, exist),
-            () => expect([1,2,3].contains(5), toBe(identicalTo(true)))
+            expect(null, exist),
+            expect([1,2,3].contains(5), toBe(identicalTo(true)))
         }
     }.run();
 
@@ -98,13 +104,13 @@ test shared void featuresShouldFailWithExplanationMessageForFailedExamples() {
             description = "desc";
             examples = { ["a", "b"], ["c", "d"] };
             when(String s1, String s2) => [s1, s2];
-            (String s1, String s2) => expect(s1, largerThan(s2)),
-            (String s1, String s2) => expect(s1, equalTo(s2)),
+            (String s1, String s2) => expect(s1, largerThan(s2))(),
+            (String s1, String s2) => expect(s1, equalTo(s2))(),
             function(String s1, String s2) {
                 if (s1 == "c") {
                     throw;
                 }
-                return expect(true, to(exist));
+                return expect(true, to(exist))();
             }
         }
     }.run();

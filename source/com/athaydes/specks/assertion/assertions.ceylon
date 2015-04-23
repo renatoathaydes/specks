@@ -6,20 +6,19 @@ import ceylon.language.meta.model {
 }
 
 import com.athaydes.specks.matcher {
-    Matcher,
     identicalTo,
-    toBe
+    toBe,
+    Matcher
+}
+import com.athaydes.specks {
+    success
 }
 
 "The result of making an assertion."
-shared abstract class AssertionResult() of assertionSuccess|AssertionFailure {}
-
-"The result of a successfull assertion"
-shared object assertionSuccess extends AssertionResult() {}
+shared alias AssertionResult => AssertionFailure?;
 
 "The result of a failed assertion"
-shared class AssertionFailure(shared String errorMessage)
-        extends AssertionResult() { string = errorMessage; }
+shared alias AssertionFailure => String;
 
 "Express an expectation that the actual value should match some condition
  according to the given matcher.
@@ -30,7 +29,7 @@ shared class AssertionFailure(shared String errorMessage)
  expect(actual, toBe(equalTo(5)));
  expect(actual, to(exist));
  </code>"
-shared AssertionResult expect<Element>(Element actual, Matcher<Element> matcher)
+shared AssertionResult expect<Element>(Element actual, Matcher<Element> matcher)()
         => matcher.matches(actual);
 
 "Expect that a condition evaluates to true.
@@ -41,7 +40,7 @@ shared AssertionResult expect<Element>(Element actual, Matcher<Element> matcher)
      expect(expectedToBeTrue, toBe(identicalTo(true)));
  </code>"
 shared AssertionResult expectCondition(Boolean expectedToBeTrue)
-        => expect(expectedToBeTrue, toBe(identicalTo(true)));
+        => expect(expectedToBeTrue, toBe(identicalTo(true)))();
 
 "Platform independent name of an Exception"
 shared String platformIndependentName(Type<Exception>|Throwable exception) =>
@@ -51,18 +50,18 @@ shared AssertionResult expectToThrow(Type<Exception> expectedException)(Throwabl
 
     AssertionResult verifyActualException(Throwable result) {
         if (type(result).exactly(expectedException)) {
-            return assertionSuccess;
+            return success;
         } else {
             value resultType = platformIndependentName(result);
             value expectedType = platformIndependentName(expectedException);
-            return AssertionFailure("expected ``expectedType`` but threw ``resultType``");
+            return "expected ``expectedType`` but threw ``resultType``";
         }
     }
 
     if (exists result) {
         return verifyActualException(result);
     } else {
-        return AssertionFailure("no Exception thrown");
+        return "no Exception thrown";
     }
 }
 

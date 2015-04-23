@@ -1,53 +1,39 @@
-
-"Random contains functions that return pseudo-random values on consecutive calls."
-shared class Random(
-    "Seed to be used for this instance of Random. Using the same seed will produce predictable results."
+class Random(
     Integer seed = system.nanoseconds) {
     
-    value s = Array { seed, seed/2 };
-    value positiveInvert7Bits = $1000000000001111111111111111111111111111111111111111111111111111;
-    value negativeInvert7Bits = $1111111111110000000000000000000000000000000000000000000000000000;
+    Integer lower32(Integer int) => int % 2^32;
     
-    "Returns a pseudo-random Integer value. The value could be any possible Integer within -2^52 and 2^52.
-     To scale the value between min/max bounds (so that you only get Integers within the bounds),
-     use the [[scale]] function.
-     
-     The algorithm used is **xorshit+**, as described on
-     [this website](http://xorshift.di.unimi.it/)"
+    value s = Array { lower32(seed), lower32(seed / 2) };
+    
     shared Integer nextInteger() {
-        variable Integer s1 = s[0] else 0;
-        Integer s0 = s[1] else 0;
+        value high = next32bits() * 2^32; // shifts 32 bits to the left
+        value low = next32bits(); // take only 32 bits as JS bitwise ops use only 32 bits
+        
+        // "concatenate" low bits to high bits, take only 52 bits so it works the same in Java and JS
+        return (high + low) % 2^52;
+    }
+    
+    "Returns a Integer between 0 (incl) and maxLimit (excl), where maxLimit must be > 0"
+    shared Integer nextPositive(Integer maxLimit) {
+        if (maxLimit <= 0) {
+            throw Exception("Illegal argument [maxLimit]: ``maxLimit`` <= 0");
+        }
+        return (nextInteger() % maxLimit).magnitude;
+    }
+    
+    shared Integer nextInRange(Integer min, Integer max)
+        => min + (max == min
+            then 0 else nextPositive(max - min));
+    
+    Integer next32bits() {
+        variable value s1 = s[0] else 0;
+        value s0 = s[1] else 0;
         s.set(0, s0);
-        s1 = s1.xor(s1.leftLogicalShift(23));
-        value newS1 = s1.xor(s0).xor(s1.rightLogicalShift(17)).xor(s0.rightLogicalShift(26));
-        s.set(1, newS1);
-        value result = (newS1 + s0);
-        return !result.negative then result.and(positiveInvert7Bits) else result.or(negativeInvert7Bits);
+        s1 = lower32(s1.xor(s1.leftLogicalShift(11)));
+        s1 = s1.xor(s1.rightLogicalShift(9));
+        s1 = lower32(s1.xor(s0.xor(s0.rightLogicalShift(13))));
+        s.set(1, s1);
+        return lower32(s1 + s0);
     }
     
 }
-
-Integer maxInt = 2^52;
-Integer minInt = -maxInt;
-Integer maximumIntSpan = maxInt - minInt;
-
-"Scales the given Integer from the bounds `-2^52` and `2^52` to the provided bounds.
- 
- Examples:
-   * scale(0) == 0
-   * scale(2^52, -10, 10) == 10
-   * scale(-(2^52), -10, 10) == -10"
-see(`function Random.nextInteger`)
-throws(`class Exception`, "if minimum > maximum")
-shared Integer scale(Integer integer, Integer minimum = -1M, Integer maximum = 1M) {
-    if (minimum > maximum) { throw Exception("minimum ``minimum`` > maximum ``maximum``"); }
-    value smallInt = -1M < integer < 1M;
-    value v1 = max {min {integer, maxInt}, minInt} - (smallInt then -10M else minInt);
-    value v2 = maximum - minimum;
-    value v1Smaller = v1.magnitude < v2.magnitude;
-    value maxSpan = smallInt then 20M else maximumIntSpan;
-    return v1Smaller
-        then (v1 * (v2.float / maxSpan)).integer + minimum
-        else (v2 * (v1.float / maxSpan)).integer + minimum;
-}
-
