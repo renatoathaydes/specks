@@ -1,6 +1,6 @@
 # specks
 
-Specks enables a different way to check that your Ceylon code works.
+**specks** enables a different way to check that your Ceylon code works.
 
 Instead of writing traditional tests, you write specifications.
 
@@ -12,11 +12,12 @@ For example, here's a simple Specification written with ``specks``:
 testExecutor(`class SpecksTestExecutor`)
 test shared Specification ceylonOperatorIsSymmetric() =>
     Specification {
-        ExpectAll {
-            description = "The == operator should be symmetric";
+        feature {
+            description = "== operator should be symmetric";
             examples = { ["a", "a"], ["", ""] };
-            (String s1, String s2) => s1 == s2,
-            (String s1, String s2) => s2 == s1
+            when(String s1, String s2) => [s1, s2];
+            (String s1, String s2) => expect(s1, equalTo(s2))(),
+            (String s1, String s2) => expect(s2, equalTo(s1))()
         }
     };
 ```
@@ -57,166 +58,57 @@ shared package my.package;
 
 > Notice that testExecutor support started with Ceylon 1.1.0, so you can't use this with 1.0
 
+## Writing specifications
 
-## All about Expectations
+Specifications are just collections of `Block`s. You can create Blocks with the functions `expectations`, `feature` and `errorCheck` (but you could also create your own blocks!).
 
-In ``specks``, there are different types of Expectations you can express:
+### expectations
 
-### Expect
-
-Simplest form - expectations are expressed as functions which return a Boolean (`true` for pass, `false` for fail):
+This is the simplest Block. It consists of a series of one or more `expect` statements as in the following example:
 
 ```ceylon
-Expect {
-    "simple comparisons to work";
-    () => 2 + 2 == 4,
-    () => 2 < 4
+expectations {
+    expect([].first, sameAs(null)),
+    expect([1].first, equalTo(1)),
+    expect([5, 4, 3, 2, 1, 0].first, equalTo(5)),
+    expect(('x'..'z').first, equalTo('x')),
+    expect(['a', 'b'].cycled.first, equalTo('a'))
 }
 ```
 
-Preferred form: Using ``Comparison`` -> { values to compare }:
+As in the other blocks, a `description` field is optional:
 
 ```ceylon
-Expect {
-    "simple comparisons to work";
-    equal -> [2 + 2, 4],
-    smaller -> [2, 4]
+expectations {
+    description = "Iterable.first expectations";
+    expect([].first, sameAs(null))
 }
 ```
 
-This form allows for better error messages as the values of the parameters are known.
+### feature
 
-At least 2 items must be provided in each entry's item, and the comparison of each item with the next is expected to yield `true`
-for the test to succeed.
+The `feature` Block can be used to specify more complex scenarios because it clearly separates a test's inputs, stimulus and expected results.
 
-The following example passes:
+Its main attractive is that it supports *examples*, enabling data-driven specifications.
 
-```ceylon
-Expect {
-    "items to be in ascending order";
-    smaller -> [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-}
-```
-
-The following example fails:
+Example of a full feature:
 
 ```ceylon
-Expect {
-    "items to be in ascending order";
-    smaller -> [1, 2, 4, 3, 5, 6, 7, 8, 9, 10]
-}
-```
-
-The error message is very descriptive:
-
-```
-Expect 'items to be in ascending order' failed: 4 is not smaller than 3
-```
-
-You can combine different kinds of expectations:
-
-```ceylon
-Expect {
-    "simple comparisons to work";
-    () => 2 + 2 == 4,
-    equal -> [2 + 2, 4],
-    larger -> [ 3 + 3, 3 + 2, 3 + 1, 3 + 0]
-}
-```
-
-### ExpectAll
-
-Allows the use of examples, as shown below:
-
-```ceylon
-ExpectAll {
-    "examples should pass";
-    { [1, 2], [5, 10], [25, 50] };
-    (Integer a, Integer b) => 2 * a == b
-}
-```
-
-The preferred form, however, is to use `Comparison`, as for `Expect`, so you get excellent error messages if the test fails:
-
-```ceylon
-ExpectAll {
-    "examples should pass";
-    examples = { [1, 2], [5, 10], [25, 50] };
-    (Integer a, Integer b) => equal -> { 2 * a, b }
-}
-```
-
-Every function within the ``ExpectAll`` block will be run with all the examples provided, so running the above example would result in the function ``2 * a == b`` being run with ``a = 1, b = 2``, ``a = 5, b = 10``, and ``a = 25, b = 50``.
-
-Notice that ``ExpectAll`` is type-safe, so the arguments of the expectation functions must match the types of the examples.
-
-#### Examples generators
-
-You can use generators to provide examples for your tests:
-
-```ceylon
-ExpectAll {
-    "generated integers to be sorted";
-    examples = { generateIntegers().sequence };
-    (Integer* ints) => equal -> { sort(ints).sequence, ints }
-}
-```
-
-### ExpectToThrow
-
-Just as important as knowing your code works, is knowing that it fails when it should, in the way it should.
-
-For that, you can use ``ExpectToThrow``:
-
-```ceylon
-ExpectToThrow {
-    `Exception`;
-    "when we call throw";
-    void() { throw; }
-}
-```
-
-### ExpectAllToThrow
-
-Finally, we have the version of ``ExpectToThrow`` which accepts examples:
-
-```ceylon
-ExpectAllToThrow {
-    `MyException`;
-    "when not given at least one positive integer";
-    { [-4, 0], [0, -1], [-2, -3], [0, 0] };
-    myFunction, // a function declared elsewhere that takes 2 Integers as arguments
-    void needsOnePositiveInteger(Integer i, Integer j) {
-        if (i <= 0 || j <= 0) {
-            throw MyException("Not given a positive integer");
-        }
+feature {
+    description = "BankAccounts support deposits and withdrawals";
+    function when(Float toDeposit, Float toWithdraw, Float finalBalance) {
+        value account = BankAccount();
+        account.deposit(toDeposit);
+        value afterDepositBalance = account.balance;
+        account.withdraw(toWithdraw);
+        return [toDeposit, afterDepositBalance, account.balance, finalBalance];
     }
+    examples = [[100.0, 20.0, 80.0], [33.0k, 31.5k, 1.5k]];
+    (Float toDeposit, Float afterDeposit, Float afterWithdrawal, Float finalBalance)
+        => expect(afterDeposit, equalTo(toDeposit)) (),
+    (Float toDeposit, Float afterDeposit, Float afterWithdrawal, Float finalBalance)
+        => expect(afterWithdrawal, equalTo(finalBalance)) ()
 }
-```
+``` 
 
-
-### Example: testing Sequence.first
-
-```ceylon
-"Ceylon [*].first Speck"
-shared test Specification firstSpeck() =>
-    Specification {
-        Expect {
-            "Ceylon [*].first should return either the first element
-             or null for empty Sequences";
-            function() {
-                String? first = [].first;
-                return first is Null;
-            },
-            equal -> { [1].first, 1 },
-            equal -> { [5, 4, 3, 2, 1, 0].first, 5 },
-            equal -> { [1, 2, 3].first, 1 }
-        },
-        Expect {
-            "Ceylon [*].first to work with String[]";
-            equal -> { ["A"].first, "A" },
-            equal -> { ["B", "C", "D"].first, "B" }
-        }
-    }
-```
 

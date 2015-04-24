@@ -7,8 +7,7 @@ import com.athaydes.specks.assertion {
 import com.athaydes.specks.matcher {
     equalTo,
     Matcher,
-    containEvery,
-    to
+    sameAs
 }
 
 
@@ -92,6 +91,14 @@ shared void run() {
             expectToThrow(`Exception`)
         }
     }, Specification {
+        expectations {
+            description = "Iterable.first expectations";
+            expect([].first, sameAs(null)),
+            expect([1].first, equalTo(1)),
+            expect([5, 4, 3, 2, 1, 0].first, equalTo(5)),
+            expect(('x'..'z').first, equalTo('x')),
+            expect(['a', 'b'].cycled.first, equalTo('a'))
+        },
         feature {
             description = "Ceylon [*].first should return either the first element or null for empty Sequences";
             when() => [];
@@ -100,17 +107,40 @@ shared void run() {
             expect([1, 2, 3].first, equalTo(1))
         },
         feature {
-            description = "Ceylon [*].first to work with String[]";
-            when() => [];
-            expect(["A"].first, equalTo("A")),
-            expect(["B", "C", "D"].first, equalTo("B"))
-        },
+            examples = [[[], null], [[1], 1], [[1,2,3], 1], [["A"], "A"]];
+            when(Object[] sequence, Object? expected) => [sequence.first, expected];
+            (Object? first, Object? expected) => expect(first, sameAs(expected))()
+        }
+    },
+    Specification {
         feature {
-            description = "";
-            when() => [];
-            expect(1..10, to(containEvery(1..10)))
+            description = "BankAccounts support deposits and withdrawals";
+            function when(Float toDeposit, Float toWithdraw, Float finalBalance) {
+                value account = BankAccount();
+                account.deposit(toDeposit);
+                value afterDepositBalance = account.balance;
+                account.withdraw(toWithdraw);
+                return [toDeposit, afterDepositBalance, account.balance, finalBalance];
+            }
+            examples = [[100.0, 20.0, 80.0], [33.0k, 31.5k, 1.5k]];
+            (Float toDeposit, Float afterDeposit, Float afterWithdrawal, Float finalBalance)
+                    => expect(afterDeposit, equalTo(toDeposit)) (),
+            (Float toDeposit, Float afterDeposit, Float afterWithdrawal, Float finalBalance)
+                    => expect(afterWithdrawal, equalTo(finalBalance)) ()
         }
     }
     ].collect((Specification speck) => print(speck.run()));
+    
+    
+    
+}
+
+class BankAccount() {
+    
+    shared void deposit(Float amount) {}
+
+    shared void withdraw(Float amount) {}
+    
+    shared Float balance = 2.0;
     
 }
