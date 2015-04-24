@@ -34,14 +34,6 @@ void run() {
 Integer[] countItemsAppearances({Object*} examples)
         => examples.collect((e1) => examples.count((e2) => e2 == e1));
 
-Integer difference(Integer a, Integer b) {
-    if (a > b) {
-        return (a - b).magnitude;
-    } else {
-        return (b - a).magnitude;
-    }
-}
-
 Integer average({Integer+} examples) {
     value examplesSeq = examples.sequence();
     assert(is [Integer+] examplesSeq);
