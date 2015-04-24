@@ -103,7 +103,9 @@ feature {
         account.withdraw(toWithdraw);
         return [toDeposit, afterDepositBalance, account.balance, finalBalance];
     }
+    
     examples = [[100.0, 20.0, 80.0], [33.0k, 31.5k, 1.5k]];
+    
     (Float toDeposit, Float afterDeposit, Float afterWithdrawal, Float finalBalance)
         => expect(afterDeposit, equalTo(toDeposit)) (),
     (Float toDeposit, Float afterDeposit, Float afterWithdrawal, Float finalBalance)
