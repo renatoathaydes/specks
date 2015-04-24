@@ -64,6 +64,14 @@ shared Matcher<Element> equalTo<Element>(Element expected)
         given Element satisfies Comparable<Element>&Object
         => ComparisonMatcher(expected, equal);
 
+"A matcher that succeeds only if the actual value is the same as the expected value,
+ where 'the same' means:
+ * expected and actual are both null.
+ * expected == actual."
+see(`function identicalTo`)
+shared Matcher<Anything> sameAs(Anything expected)
+        => SamenessMatcher(expected);
+
 "A matcher that succeeds only if the actual value **is** the expected value when compared
  by identity (see [[Identifiable]]).
  
@@ -193,6 +201,27 @@ class ExistenceMatcher(Boolean mustExist)
             return "expected to exist but was null";
         }
         return success;
+    }
+    
+}
+
+class SamenessMatcher(Anything expected)
+        satisfies Matcher<Anything> {
+
+    shared actual AssertionResult matches(Anything actual) {
+        if (exists expected, exists actual) {
+            if (actual == expected) {
+                return success;
+            } else {
+                return "``actual`` is not as expected: ``expected``";
+            }
+        } else if (exists actual) {
+            return "Expected <null> but was ``actual``";
+        } else if (exists expected) {
+            return "Expected ``expected`` but was <null>";
+        } else {
+            return success;
+        }
     }
     
 }
