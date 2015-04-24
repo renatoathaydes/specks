@@ -98,6 +98,15 @@ Block assertionsWithExamplesBlock<Where>(
     };
 }
 
+"A block that consists of a series of one or more `expect` statements which
+ verify the behaviour of a system."
+shared Block expectations(
+    "Assertions that verify the behaviour of a system."
+    {AssertionResult()+} assertions,
+    "Description of this group of expectations."
+    String description = "")
+        => feature(() => [], assertions, description);
+
 "A feature block allows the description of how a software functionality is expected to work."
 shared Block feature<out Where = [],in Result = Where>(
     "The action being tested in this feature."
