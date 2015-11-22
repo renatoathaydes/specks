@@ -1,3 +1,7 @@
+import com.vasileff.ceylon.random.api {
+	Random,
+	LCGRandom
+}
 
 "Generates a range of integers within the given bounds.
 
@@ -63,7 +67,7 @@ shared {String+} generateStrings(
     "Allowed characters for the returned Strings"
     [Character+] allowedChars = '\{#20}'..'\{#7E}',
     "Random instance to use for generating Strings"
-    Random random = Random()) {
+    Random random = LCGRandom()) {
     
     if (count < 1) {
         throw Exception("Count must be positive");
@@ -73,10 +77,11 @@ shared {String+} generateStrings(
     }
     
     function randomString() {
-        value size = scale(random.nextInteger(), max {shortest, 0}, longest);
+        value checkedShortest = max{ 0, shortest };
+        value maxBound = longest - checkedShortest;
+        value size = checkedShortest + random.nextInteger(maxBound + 1);
         if (size == 0) { return ""; }
-        return String((1..size).collect((_)
-            => allowedChars[scale(random.nextInteger(), 0, allowedChars.size - 1)]).coalesced);
+        return String(random.elements(allowedChars).take(size));
     }
     
     if (count == 1) { return { randomString() }; }

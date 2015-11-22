@@ -3,21 +3,6 @@
 
 "Run the module `com.athaydes.specks`."
 shared void run() {
-    void show(Integer i) {
-        print("``i`` -> " + toBinary(i).string);
-    }
-    
-    for (i in -2..2) {
-        show(i);
-    }
-    
-    show(-129);
-    show(-128);
-    show(-127);
-    show(-126);
-    show(126);
-    show(127);
-    show(128);
     
     /*
     void myFunction(Integer i, Integer j) {
