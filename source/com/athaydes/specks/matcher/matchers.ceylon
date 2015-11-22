@@ -60,7 +60,7 @@ shared Matcher<Anything> exist = ExistenceMatcher { mustExist = true; };
 "A matcher that succeeds only if the actual value is equal to the expected value,
  when compared with the [[Comparable.compare]] method."
 see(`function identicalTo`)
-shared Matcher<Element> equalTo<Element>(Element expected)
+shared Matcher<Element> equalTo<in Element>(Element expected)
         given Element satisfies Comparable<Element>&Object
         => ComparisonMatcher(expected, equal);
 

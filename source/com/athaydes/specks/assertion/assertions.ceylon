@@ -29,7 +29,7 @@ shared alias AssertionFailure => String;
  expect(actual, toBe(equalTo(5)));
  expect(actual, to(exist));
  </code>"
-shared AssertionResult expect<Element>(Element actual, Matcher<Element> matcher)()
+shared AssertionResult expect<in Element>(Element actual, Matcher<Element> matcher)
         => matcher.matches(actual);
 
 "Expect that a condition evaluates to true.
@@ -40,7 +40,7 @@ shared AssertionResult expect<Element>(Element actual, Matcher<Element> matcher)
      expect(expectedToBeTrue, toBe(identicalTo(true)));
  </code>"
 shared AssertionResult expectCondition(Boolean expectedToBeTrue)
-        => expect(expectedToBeTrue, toBe(identicalTo(true)))();
+        => expect(expectedToBeTrue, toBe(identicalTo(true)));
 
 "Platform independent name of an Exception"
 shared String platformIndependentName(Type<Exception>|Throwable exception) =>

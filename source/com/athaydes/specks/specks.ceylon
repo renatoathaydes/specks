@@ -102,13 +102,13 @@ Block assertionsWithExamplesBlock<Where>(
  verify the behaviour of a system."
 shared Block expectations(
     "Assertions that verify the behaviour of a system."
-    {AssertionResult()+} assertions,
+    {AssertionResult+} assertions,
     "Description of this group of expectations."
     String description = "")
-        => feature(() => [], assertions, description);
+        => feature(() => [], assertions.map((a) => () => a), description);
 
 "A feature block allows the description of how a software functionality is expected to work."
-shared Block feature<out Where = [],in Result = Where>(
+shared Block feature<out Where = [], in Result = Where>(
     "The action being tested in this feature."
     Callable<Result,Where> when,
     "Assertions to verify the result of running the 'when' function."

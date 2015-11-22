@@ -35,20 +35,22 @@ Boolean throwThis(Exception e) {
 test shared void happySpecificationThatPassesAllTests() {
     value specResult = Specification {
         feature {
-            examples = { [2, 4, 6], [0, 0, 0], [-1, 0, -1] };
-
             when(Integer a, Integer b, Integer expected)
                     => [a + b, b + a, expected];
 
+            examples = { [2, 4, 6], [0, 0, 0], [-1, 0, -1] };
+
             (Integer r1, Integer r2, Integer expected)
-                    => expect(r1, toBe(equalTo(r2), equalTo(expected)))()
+                    => expect(r1, equalTo<Integer>(expected)),
+            (Integer r1, Integer r2, Integer expected)
+                    => expect(r2, equalTo<Integer>(expected))
         },
         feature {
             when() => [];
-            expect(2 + 2, equalTo(4)),
-            expect(3 + 2, equalTo(5)),
-            expect(4 + 2, equalTo(6)),
-            expect(null, not(to(exist)))
+            () => expect(2 + 2, equalTo<Integer>(4)),
+            () => expect(3 + 2, equalTo<Integer>(5)),
+            () => expect(4 + 2, equalTo<Integer>(6)),
+            () => expect(null, not(to(exist)))
         },
         feature {
             examples = { [true, false], [false, true] };
@@ -64,8 +66,9 @@ test shared void happySpecificationThatPassesAllTests() {
         }
     }.run();
     
+    print(specResult);
     assertEquals(specResult.size, 4);
-    assertEquals(specResult.collect((results) => results.size), [3, 4, 4, 2]);
+    assertEquals(specResult.collect((results) => results.size), [6, 4, 4, 2]);
     assert(flatten(specResult).every((result) => equalsCompare(result, success)));
 }
 
@@ -79,12 +82,12 @@ test shared void featuresShouldFailWithExplanationMessage() {
         feature {
             description = "should fail with explanation message";
             when() => [];
-            expect(2 + 1, largerThan(4)),
-            expect(3 - 2, equalTo(2)),
-            expect(5 + 5, smallerThan(9)),
+            () => expect(2 + 1, largerThan<Integer>(4)),
+            () => expect(3 - 2, equalTo<Integer>(2)),
+            () => expect(5 + 5, smallerThan<Integer>(9)),
             error,
-            expect(null, exist),
-            expect([1,2,3].contains(5), toBe(identicalTo(true)))
+            () => expect(null, exist),
+            () => expect([1,2,3].contains(5), identicalTo<Boolean>(true))
         }
     }.run();
 
@@ -104,13 +107,13 @@ test shared void featuresShouldFailWithExplanationMessageForFailedExamples() {
             description = "desc";
             examples = { ["a", "b"], ["c", "d"] };
             when(String s1, String s2) => [s1, s2];
-            (String s1, String s2) => expect(s1, largerThan(s2))(),
-            (String s1, String s2) => expect(s1, equalTo(s2))(),
+            (String s1, String s2) => expect(s1, largerThan<String>(s2)),
+            (String s1, String s2) => expect(s1, equalTo<String>(s2)),
             function(String s1, String s2) {
                 if (s1 == "c") {
                     throw;
                 }
-                return expect(true, to(exist))();
+                return expect(true, to(exist));
             }
         }
     }.run();
