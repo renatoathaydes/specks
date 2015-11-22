@@ -43,12 +43,13 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
         
         value spec = f.toplevel then invokeTopFunction() else invokeMemberFunction();
         value result = spec.run();
-        value allResults = [ for (a in result) for (b in a) for (c in b) c ];
+        value allResults = [ for (specRun in result) for (specResult in specRun) specResult ];
         value failures = [ for (specResult in allResults) if (is SpecFailure specResult) specResult];
         
         if (!failures.empty) {
             value errors = [ for (failure in failures) if (is Exception failure) failure ];
             if (!errors.empty) {
+                for (e in errors) { e.printStackTrace(); }
                 throw Exception(failures.string);
             }
             throw AssertionError(failures.string);
