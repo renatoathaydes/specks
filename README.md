@@ -16,8 +16,8 @@ test shared Specification ceylonOperatorIsSymmetric() =>
             description = "== operator should be symmetric";
             examples = { ["a", "a"], ["", ""] };
             when(String s1, String s2) => [s1, s2];
-            (String s1, String s2) => expect(s1, equalTo(s2))(),
-            (String s1, String s2) => expect(s2, equalTo(s1))()
+            (String s1, String s2) => expect(s1, toBe(equalTo<String>(s2))),
+            (String s1, String s2) => expect(s2, toBe(equalTo<String>(s1)))
         }
     };
 ```
@@ -27,6 +27,7 @@ Notice that if the first expectation function (``s1 == s2``) failed, the next wo
 Contrast that with your normal unit test:
 
 ```ceylon
+// NOT a Specks test!
 test void commonUnitTest() {
     value s1 = "a";
     value s2 = "a";
@@ -49,6 +50,12 @@ With ``specks``, the number of examples you need to test doesn't make any differ
 
 ## Running tests with specks
 
+First of all, import Specks in your module.ceylon file:
+
+```ceylon
+import com.athaydes.specks "0.2.0"
+```
+
 To run a Specification using Ceylon's testing framework, you just need to annotate your function/class/package/module with the ``testExecutor`` annotation so the test will be run using the ``SpecksTestExecutor``:
 
 ```ceylon
@@ -69,10 +76,10 @@ This is the simplest Block. It consists of a series of one or more `expect` stat
 ```ceylon
 expectations {
     expect([].first, sameAs(null)),
-    expect([1].first, equalTo(1)),
-    expect([5, 4, 3, 2, 1, 0].first, equalTo(5)),
-    expect(('x'..'z').first, equalTo('x')),
-    expect(['a', 'b'].cycled.first, equalTo('a'))
+    expect([1].first, equalTo<Integer>(1)),
+    expect([5, 4, 3, 2, 1, 0].first, equalTo<Integer>(5)),
+    expect(('x'..'z').first, equalTo<Character>('x')),
+    expect(['a', 'b'].cycled.first, equalTo<Character>('a'))
 }
 ```
 
@@ -107,9 +114,9 @@ feature {
     examples = [[100.0, 20.0, 80.0], [33.0k, 31.5k, 1.5k]];
     
     (Float toDeposit, Float afterDeposit, Float afterWithdrawal, Float finalBalance)
-        => expect(afterDeposit, equalTo(toDeposit)) (),
+        => expect(afterDeposit, equalTo<Float>(toDeposit)),
     (Float toDeposit, Float afterDeposit, Float afterWithdrawal, Float finalBalance)
-        => expect(afterWithdrawal, equalTo(finalBalance)) ()
+        => expect(afterWithdrawal, equalTo<Float>(finalBalance))
 }
 ``` 
 
