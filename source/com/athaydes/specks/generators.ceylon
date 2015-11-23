@@ -1,6 +1,6 @@
 import com.vasileff.ceylon.random.api {
 	Random,
-	LCGRandom
+	platformRandom
 }
 
 "Generates a range of integers within the given bounds.
@@ -67,7 +67,7 @@ shared {String+} generateStrings(
 	"Allowed characters for the returned Strings"
 	[Character+] allowedChars = '\{#20}'..'\{#7E}',
 	"Random instance to use for generating Strings"
-	Random random = LCGRandom()) {
+	Random random = platformRandom()) {
 	
 	if (count < 1) {
 		throw Exception("Count must be positive");
