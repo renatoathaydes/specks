@@ -16,8 +16,8 @@ test shared Specification ceylonOperatorIsSymmetric() =>
             description = "== operator should be symmetric";
             examples = { ["a", "a"], ["", ""] };
             when(String s1, String s2) => [s1, s2];
-            (String s1, String s2) => expect(s1, toBe(equalTo<String>(s2))),
-            (String s1, String s2) => expect(s2, toBe(equalTo<String>(s1)))
+            (String s1, String s2) => expect(s1, toBe(equalTo(s2))),
+            (String s1, String s2) => expect(s2, toBe(equalTo(s1)))
         }
     };
 ```
@@ -76,19 +76,23 @@ This is the simplest Block. It consists of a series of one or more `expect` stat
 ```ceylon
 expectations {
     expect([].first, sameAs(null)),
-    expect([1].first, equalTo<Integer>(1)),
-    expect([5, 4, 3, 2, 1, 0].first, equalTo<Integer>(5)),
-    expect(('x'..'z').first, equalTo<Character>('x')),
-    expect(['a', 'b'].cycled.first, equalTo<Character>('a'))
+    expect([1].first, equalTo(1)),
+    expect([5, 4, 3, 2, 1, 0].first, equalTo(5)),
+    expect(('x'..'z').first, equalTo('x')),
+    expect(['a', 'b'].cycled.first, equalTo('a'))
 }
 ```
+
+> To make the expressions above read even more like English, you can use the *cosmetic*
+  functions `to` and `toBe`, as in `expect(a, toBe(equalTo(b)));` or
+  `expect(a, to(contain(b)));`.
 
 As in the other blocks, a `description` field is optional:
 
 ```ceylon
 expectations {
     description = "Iterable.first expectations";
-    expect([].first, sameAs(null))
+    expect([].first, toBe(sameAs(null)))
 }
 ```
 
@@ -114,10 +118,10 @@ feature {
     examples = [[100.0, 20.0, 80.0], [33.0k, 31.5k, 1.5k]];
     
     (Float toDeposit, Float afterDeposit, Float afterWithdrawal, Float finalBalance)
-        => expect(afterDeposit, equalTo<Float>(toDeposit)),
+        => expect(afterDeposit, equalTo(toDeposit)),
     (Float toDeposit, Float afterDeposit, Float afterWithdrawal, Float finalBalance)
-        => expect(afterWithdrawal, equalTo<Float>(finalBalance))
+        => expect(afterWithdrawal, equalTo(finalBalance))
 }
-``` 
+```
 
 

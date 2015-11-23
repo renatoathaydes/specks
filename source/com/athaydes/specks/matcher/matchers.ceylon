@@ -8,7 +8,7 @@ import com.athaydes.specks.assertion {
 "Base class of all **specks** matchers.
  
  A matcher can be used to verify that a value matches some expected result."
-shared interface Matcher<in Element> {
+shared interface Matcher<Element> {
     
     "Checks if the actual value matches an expected value or condition."
     shared formal AssertionResult matches(Element actual);
@@ -60,7 +60,7 @@ shared Matcher<Anything> exist = ExistenceMatcher { mustExist = true; };
 "A matcher that succeeds only if the actual value is equal to the expected value,
  when compared with the [[Comparable.compare]] method."
 see(`function identicalTo`)
-shared Matcher<Element> equalTo<in Element>(Element expected)
+shared Matcher<Element> equalTo<Element>(Element expected)
         given Element satisfies Comparable<Element>&Object
         => ComparisonMatcher(expected, equal);
 

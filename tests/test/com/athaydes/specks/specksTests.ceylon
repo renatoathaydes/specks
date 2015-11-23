@@ -41,15 +41,15 @@ test shared void happySpecificationThatPassesAllTests() {
             examples = { [2, 4, 6], [0, 0, 0], [-1, 0, -1] };
 
             (Integer r1, Integer r2, Integer expected)
-                    => expect(r1, equalTo<Integer>(expected)),
+                    => expect(r1, equalTo(expected)),
             (Integer r1, Integer r2, Integer expected)
-                    => expect(r2, equalTo<Integer>(expected))
+                    => expect(r2, equalTo(expected))
         },
         feature {
             when() => [];
-            () => expect(2 + 2, equalTo<Integer>(4)),
-            () => expect(3 + 2, equalTo<Integer>(5)),
-            () => expect(4 + 2, equalTo<Integer>(6)),
+            () => expect(2 + 2, equalTo(4)),
+            () => expect(3 + 2, equalTo(5)),
+            () => expect(4 + 2, equalTo(6)),
             () => expect(null, not(to(exist)))
         },
         feature {
@@ -82,12 +82,12 @@ test shared void featuresShouldFailWithExplanationMessage() {
         feature {
             description = "should fail with explanation message";
             when() => [];
-            () => expect(2 + 1, largerThan<Integer>(4)),
-            () => expect(3 - 2, equalTo<Integer>(2)),
-            () => expect(5 + 5, smallerThan<Integer>(9)),
+            () => expect(2 + 1, largerThan(4)),
+            () => expect(3 - 2, equalTo(2)),
+            () => expect(5 + 5, smallerThan(9)),
             error,
             () => expect(null, exist),
-            () => expect([1,2,3].contains(5), identicalTo<Boolean>(true))
+            () => expect([1,2,3].contains(5), identicalTo(true))
         }
     }.run();
 
@@ -107,8 +107,8 @@ test shared void featuresShouldFailWithExplanationMessageForFailedExamples() {
             description = "desc";
             examples = { ["a", "b"], ["c", "d"] };
             when(String s1, String s2) => [s1, s2];
-            (String s1, String s2) => expect(s1, largerThan<String>(s2)),
-            (String s1, String s2) => expect(s1, equalTo<String>(s2)),
+            (String s1, String s2) => expect(s1, largerThan(s2)),
+            (String s1, String s2) => expect(s1, equalTo(s2)),
             function(String s1, String s2) {
                 if (s1 == "c") {
                     throw;

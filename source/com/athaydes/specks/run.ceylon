@@ -51,8 +51,8 @@ shared void run() {
             description = "== operator should be symmetric";
             examples = { ["a", "a"], ["", ""] };
             when(String s1, String s2) => [s1, s2];
-            (String s1, String s2) => expect(s1, equalTo<String>(s2)),
-            (String s1, String s2) => expect(s2, toBe(equalTo<String>(s1)))
+            (String s1, String s2) => expect(s1, equalTo(s2)),
+            (String s1, String s2) => expect(s2, toBe(equalTo(s1)))
         }
     },
     Specification {
@@ -72,13 +72,13 @@ shared void run() {
             description = "More examples";
             when(Integer a, Integer b) => [a, b];
             examples = { [1, 2], [5, 10], [25, 50] };
-            (Integer a, Integer b) => expect(2 * a, equalTo<Integer>(b))
+            (Integer a, Integer b) => expect(2 * a, equalTo(b))
         },
         feature {
             description = "Using generated examples";
             examples = { generateIntegers().sequence() };
             when(Integer* ints) => sort(ints);
-            (Integer* ints) => expect(ints, sorted<Integer>(true))
+            (Integer* ints) => expect(ints, sorted<Integer>{ ascending = true; })
         },
         errorCheck {
             description = "when we call throw";
@@ -95,17 +95,17 @@ shared void run() {
         expectations {
             description = "Iterable.first expectations";
             expect([].first, sameAs(null)),
-            expect([1].first, equalTo<Integer>(1)),
-            expect([5, 4, 3, 2, 1, 0].first, equalTo<Integer>(5)),
-            expect(('x'..'z').first, equalTo<Character>('x')),
-            expect(['a', 'b'].cycled.first, equalTo<Character>('a'))
+            expect([1].first, equalTo(1)),
+            expect([5, 4, 3, 2, 1, 0].first, equalTo(5)),
+            expect(('x'..'z').first, equalTo('x')),
+            expect(['a', 'b'].cycled.first, equalTo('a'))
         },
         feature {
             description = "Ceylon [*].first should return either the first element or null for empty Sequences";
             when() => [];
-            () => expect([1].first, equalTo<Integer>(1)),
-            () => expect([5, 4, 3, 2, 1, 0].first, equalTo<Integer>(5)),
-            () => expect([1, 2, 3].first, equalTo<Integer>(1))
+            () => expect([1].first, equalTo(1)),
+            () => expect([5, 4, 3, 2, 1, 0].first, equalTo(5)),
+            () => expect([1, 2, 3].first, equalTo(1))
         },
         feature {
             examples = [[[], null], [[1], 1], [[1,2,3], 1], [["A"], "A"]];
@@ -125,9 +125,9 @@ shared void run() {
             }
             examples = [[100.0, 20.0, 80.0], [33.0k, 31.5k, 1.5k]];
             (Float toDeposit, Float afterDeposit, Float afterWithdrawal, Float finalBalance)
-                    => expect(afterDeposit, equalTo<Float>(toDeposit)),
+                    => expect(afterDeposit, equalTo(toDeposit)),
             (Float toDeposit, Float afterDeposit, Float afterWithdrawal, Float finalBalance)
-                    => expect(afterWithdrawal, equalTo<Float>(finalBalance)) 
+                    => expect(afterWithdrawal, equalTo(finalBalance)) 
         }
     }
     ].collect((Specification speck) => print(speck.run()));
