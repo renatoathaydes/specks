@@ -65,7 +65,7 @@ shared {String+} generateStrings(
 	"the higher bound for the String size"
 	Integer longest = 100,
 	"Allowed characters for the returned Strings"
-	[Character+] allowedChars = '\{#20}'..'\{#7E}',
+	[Character+] allowedCharacters = '\{#20}'..'\{#7E}',
 	"Random instance to use for generating Strings"
 	Random random = platformRandom()) {
 	
@@ -81,7 +81,7 @@ shared {String+} generateStrings(
 		value maxBound = longest - checkedShortest;
 		value size = checkedShortest + random.nextInteger(maxBound + 1);
 		if (size == 0) { return ""; }
-		return String(random.elements(allowedChars).take(size));
+		return String(random.elements(allowedCharacters).take(size));
 	}
 	
 	if (count == 1) { return { randomString() }; }
