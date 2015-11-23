@@ -86,8 +86,8 @@ shared Matcher<Element> identicalTo<Element>(Element expected)
         => IdentityMatcher(expected);
 
 "A matcher that succeeds only if the actual Iterable is empty."
-shared Matcher<{Anything*}> empty()
-        => EmptyMatcher<{Anything*}>();
+shared Matcher<{Anything*}> empty
+        = EmptyMatcher<{Anything*}>();
 
 "A matcher that succeeds only if the actual Iterable has the expected size."
 shared Matcher<{Anything*}> haveSize(Integer expectedSize)

@@ -81,8 +81,8 @@ shared void run() {
             (Integer* ints) => expect(ints, sorted<Integer>{ ascending = true; })
         },
         errorCheck {
-            description = "when we call throw";
-            function when() { throw; }
+            description = "Dividing 1 by 0 results in an Exception";
+            function when() => 1 / 0;
             expectToThrow(`Exception`)
         },
         errorCheck {
@@ -95,10 +95,27 @@ shared void run() {
         expectations {
             description = "Iterable.first expectations";
             expect([].first, sameAs(null)),
+            expectCondition(2 > 1),
             expect([1].first, equalTo(1)),
             expect([5, 4, 3, 2, 1, 0].first, equalTo(5)),
             expect(('x'..'z').first, equalTo('x')),
             expect(['a', 'b'].cycled.first, equalTo('a'))
+        },
+        expectations {
+            expectCondition(2 > 1),
+            expectCondition(false)
+        },
+        feature {
+            when() => [];
+            () => expectCondition(false) // will fail
+        },
+        feature {
+            description = "[item, ...].first returns item";
+            when(Integer a, Integer b, Comparison expectedResult)
+                    => [a <=> b, expectedResult];
+            examples = [[1, 2, smaller], [2, 3, larger]];
+            (Comparison actual, Comparison expectedResult)
+                    => expect(actual, toBe(sameAs(expectedResult)))
         },
         feature {
             description = "Ceylon [*].first should return either the first element or null for empty Sequences";

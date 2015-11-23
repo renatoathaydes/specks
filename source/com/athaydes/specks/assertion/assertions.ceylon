@@ -29,7 +29,7 @@ shared alias AssertionFailure => String;
  expect(actual, toBe(equalTo(5)));
  expect(actual, to(exist));
  </code>"
-shared AssertionResult expect<in Element>(Element actual, Matcher<Element> matcher)
+shared AssertionResult expect<Element>(Element actual, Matcher<Element> matcher)
         => matcher.matches(actual);
 
 "Expect that a condition evaluates to true.
