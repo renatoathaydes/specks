@@ -1,6 +1,15 @@
+import ceylon.language.meta {
+	type
+}
+import ceylon.language.meta.model {
+	Type,
+	Class,
+	ClassModel
+}
+
 import com.athaydes.specks.assertion {
-    AssertionResult,
-    AssertionFailure
+	AssertionResult,
+	AssertionFailure
 }
 
 "The result of running a Specification which fails or causes an error.
@@ -29,7 +38,7 @@ shared class Specification(
     "block which describe this [[Specification]]."
     {Block+} blocks) {
     
-    function results(Block block) {
+    {SpecResult*} results(Block block) {
         print("Running block ``block.description``");
         return block.runTests();
     }
@@ -48,10 +57,10 @@ shared class Specification(
 
 SpecResult specResult(AssertionResult() applyAssertion, String description, Anything[] where) {
     try {
-        value result = applyAssertion();
+        AssertionResult result = applyAssertion();
         switch (result)
         case (is AssertionFailure) {
-            value whereString = where.empty then "" else " ``where``";
+            String whereString = where.empty then "" else " ``where``";
             return "``description`` failed: ``result````whereString``";
         }
         case (is Null) {
@@ -121,7 +130,7 @@ shared Block feature<out Where = [], in Result = Where>(
         given Where satisfies Anything[]
         given Result satisfies Anything[] {
     
-    value internalDescription = blockDescription("Feature", description);
+    String internalDescription = blockDescription("Feature", description);
     
     if (examples.empty) {
         "If you do not provide any examples, your 'when' function must not take any parameters."
@@ -156,7 +165,7 @@ shared Block errorCheck<Where = []>(
     AssertionResult applyAssertionToExample(AssertionResult(Throwable?) assertion)(Where example)
             => applyAssertion(() => when(*example))(assertion)();
     
-    value internalDescription = blockDescription("ErrorCheck", description);
+    String internalDescription = blockDescription("ErrorCheck", description);
     
     if (examples.empty) {
         "If you do not provide any examples, your 'when' function must not take any parameters."
@@ -167,4 +176,111 @@ shared Block errorCheck<Where = []>(
                 (assertion) => applyAssertionToExample(assertion)), examples);
     }
     
+}
+
+shared Block propertyCheck<Result, Where>(
+    "The action being tested in this feature."
+    Callable<Result, Where> when,
+    "Assertions to verify the result of running the 'when' function."
+    {Callable<AssertionResult,Result>+} assertions,
+    "Description of this feature."
+    String description = "",
+    Integer testCount = 100,
+    "Input data generator functions"
+    [Anything()+] generators = [() => generateStrings().first, () => generateIntegers().first])
+		given Where satisfies Anything[]
+		given Result satisfies Anything[]
+		=> let (desc = description) object satisfies Block {
+
+	description = desc;
+
+	Where exampleOf([Type<Anything>+] types) {
+		value typeGenerators = types.map((requiredType) {
+			value generator = generators.find((gen) {
+				value genReturnType = type(gen).typeArgumentList.first;
+				// support only single-instance generators for now
+				return if (exists genReturnType) then genReturnType.subtypeOf(requiredType)
+				else false;
+			});
+			if (!exists generator) {
+				throw Exception("No generator exists for type: ``requiredType``");
+			}
+			return generator;
+		});
+		value instance = [for (generate in typeGenerators) generate() ];
+		
+		value tuple = Tuple(instance.first, instance.rest);
+		
+		"tuple must be an instance of Where because Where was introspected to create it"
+		assert(is Where tuple);
+		return tuple;
+	}
+	
+	value argTypes = TypeArgumentsChecker().argumentTypes(when);
+	value examples = (0:testCount).map((it) => exampleOf(argTypes));
+	
+	shared actual {SpecResult*} runTests()
+			=> feature<Where, Result>(when, assertions, description, examples).runTests();
+	
+};
+
+class TypeArgumentsChecker() {
+	
+	alias AnyTuple => Tuple<Anything, Anything, Anything>;
+	alias AnySequential => Sequential<Anything>;
+	
+	shared [Type<Anything>+] argumentTypes(Callable<Anything, Nothing> when) {
+		value functionType = type(when);
+		Type<Anything>? args = functionType.typeArgumentList[1];
+		
+		"Callables always have 2 arguments"
+		assert(exists args);
+		
+		value result = allTypesOf(args);
+		if (exists first = result.first) {
+			return [first].append(result.rest);
+		} else {
+			throw Exception("The `when` function does not take any arguments");
+		}
+	}
+	
+	"Handles 'terminal' argument types which cannot have any other arguments after them."
+	[Type<AnySequential>*]? terminalArgumentTypes(Type<Anything> argument) {
+		if (is Type<AnyTuple> argument) {
+			return null;
+		}
+		if (is Type<[]> argument) {
+			return [];
+		}
+		if (is Type<AnySequential> argument) {
+			return [argument];
+		}
+		return null;
+	}
+	
+	[Type<Anything>*] allTypesOf(Type<Anything> argumentType) {
+		// args may be a Tuple type or one of the terminal types
+		value terminalArgTypes = terminalArgumentTypes(argumentType);
+		if (exists terminalArgTypes) {
+			return terminalArgTypes;
+		}
+		
+		// not a terminal type, so it must be a Tuple type
+		if (is Class<AnyTuple> argumentType) {
+			return tupleTypes(argumentType);
+		} else {
+			throw Exception("Function has an unknown argument type: ``argumentType``");
+		}
+	}
+	
+	[Type<Anything>*] tupleTypes(Class<AnyTuple> tupleClass) {
+		Type<Anything>? typeArgs = tupleClass.typeArgumentList[1];
+		Type<Anything>? nextTypeArgs = tupleClass.typeArgumentList[2];
+		
+		"All Tuples have 3 type arguments"
+		assert(exists typeArgs, exists nextTypeArgs);
+		
+		return [typeArgs].append(allTypesOf(nextTypeArgs));
+	}
+	
 }
