@@ -153,17 +153,6 @@ shared void run() {
     
 }
 
-shared void runPropertyChecks() {
-	print(propertyCheck((String s) => [2], { (Integer i) => expect(2, equalTo(2)) }).runTests());
-	propertyCheck((Integer s, Boolean b) => [2], { (Integer i) => expect(2, equalTo(2)) });
-	propertyCheck((String* s) => [2], { (Integer i) => expect(2, equalTo(2)) });
-	propertyCheck((String+ s) => [2], { (Integer i) => expect(2, equalTo(2)) });
-	propertyCheck((Boolean b, String+ s) => [2], { (Integer i) => expect(2, equalTo(2)) });
-	propertyCheck(([String+] s) => [2], { (Integer i) => expect(2, equalTo(2)) });
-	propertyCheck(([String*] s) => [2], { (Integer i) => expect(2, equalTo(2)) });
-	//propertyCheck(() => [2], { (Integer i) => expect(2, equalTo(2)) });
-}
-
 class BankAccount() {
     
     shared void deposit(Float amount) {}

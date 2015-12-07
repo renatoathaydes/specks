@@ -3,8 +3,7 @@ import ceylon.language.meta {
 }
 import ceylon.language.meta.model {
 	Type,
-	Class,
-	ClassModel
+	Class
 }
 
 import com.athaydes.specks.assertion {
@@ -207,9 +206,19 @@ shared Block propertyCheck<Result, Where>(
 			}
 			return generator;
 		});
-		value instance = [for (generate in typeGenerators) generate() ];
 		
-		value tuple = Tuple(instance.first, instance.rest);
+        Tuple<Anything, Anything, Anything> typedTuple({Anything+} array) {
+        	if (exists second = array.rest.first) {
+        		return Tuple(array.first, typedTuple({ second }.chain(array.rest.rest)));
+        	}
+        	else {
+        		return Tuple(array.first, []);
+        	}
+        }
+		
+		value instance = [ for (generate in typeGenerators) generate() ];
+		
+		value tuple = typedTuple(instance);
 		
 		"tuple must be an instance of Where because Where was introspected to create it"
 		assert(is Where tuple);

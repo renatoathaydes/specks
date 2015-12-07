@@ -4,7 +4,8 @@ import ceylon.language.meta.model {
 import ceylon.test {
     test,
     assertEquals,
-    equalsCompare
+    equalsCompare,
+    assertTrue
 }
 
 import com.athaydes.specks {
@@ -12,7 +13,8 @@ import com.athaydes.specks {
     SpecResult,
     success,
     feature,
-    errorCheck
+    errorCheck,
+    propertyCheck
 }
 import com.athaydes.specks.assertion {
     expect,
@@ -26,14 +28,14 @@ import com.athaydes.specks.matcher {
 
 
 [SpecResult*] flatten({SpecResult*}[] specResult) =>
-        [ for (res in specResult) for (row in res) row ];
+        [ for ({SpecResult*} res in specResult) for (SpecResult row in res) row ];
 
 Boolean throwThis(Exception e) {
     throw e;
 }
 
 test shared void happySpecificationThatPassesAllTests() {
-    value specResult = Specification {
+    {SpecResult*}[] specResult = Specification {
         feature {
             when(Integer a, Integer b, Integer expected)
                     => [a + b, b + a, expected];
@@ -78,7 +80,7 @@ test shared void featuresShouldFailWithExplanationMessage() {
     Nothing error() {
         throw;
     }
-    value specResult = Specification {
+    {SpecResult*}[] specResult = Specification {
         feature {
             description = "should fail with explanation message";
             when() => [];
@@ -102,7 +104,7 @@ test shared void featuresShouldFailWithExplanationMessage() {
 }
 
 test shared void featuresShouldFailWithExplanationMessageForFailedExamples() {
-    value specResult = Specification {
+    {SpecResult*}[] specResult = Specification {
         feature {
             description = "desc";
             examples = { ["a", "b"], ["c", "d"] };
@@ -130,7 +132,7 @@ test shared void featuresShouldFailWithExplanationMessageForFailedExamples() {
 
 test shared void errorCheckShouldFailWithExplanationMessageForEachExample() {
     String desc = "throw this bad";
-    value specResult = Specification {
+    {SpecResult*}[] specResult = Specification {
         errorCheck {
             description = desc;
             examples = { [1, 2], [3, 4] };
@@ -143,8 +145,78 @@ test shared void errorCheckShouldFailWithExplanationMessageForEachExample() {
         }
     }.run();
     
-    value errors = flatten(specResult);
+    SpecResult[] errors = flatten(specResult);
     assertEquals(errors[0], "ErrorCheck '``desc``' failed: expected ``platformIndependentName(`MutationException`)`` but threw ``Exception("Bad")`` [1, 2]");
     assertEquals(errors[1], "ErrorCheck '``desc``' failed: expected ``platformIndependentName(`MutationException`)`` but threw ``Exception("Bad")`` [3, 4]");
     assertEquals(errors[2], "ErrorCheck failed: no Exception thrown");
+}
+
+test shared void trivialPropertyChecksShouldSucceed() {
+    {SpecResult*}[] specResult = Specification {
+        propertyCheck(
+            (String string) => [string.size],
+            { (Integer len) => expect(len, largerThan(-1)) })
+    }.run();
+
+    assertEquals(specResult.size, 1);
+    assert(exists firstResults = specResult.first);
+    assertEquals(firstResults.sequence(), [success].cycled.take(100).sequence());
+}
+
+test shared void limitedCountPropertyChecksShouldSucceed() {
+    value testSamples = 5;
+    {SpecResult*}[] specResult = Specification {
+        propertyCheck {
+            description = "test1";
+            testCount = testSamples;
+            when(String string) => [string.size];
+            assertions = { (Integer len) => expect(len, largerThan(-1)) };
+        }
+    }.run();
+    
+    assertEquals(specResult.size, 1);
+    assert(exists firstResults = specResult.first);
+    assertEquals(firstResults.sequence(), [success].cycled.take(testSamples).sequence());
+}
+
+test shared void manyArgumentsPropertyChecksShouldSucceed() {
+    print("Many Args test");
+    {SpecResult*}[] specResult = Specification {
+        propertyCheck(
+            (String s, Integer i, String t) => [s, i, t],
+            { (String s, Integer i, String t)
+                => expectCondition(true),
+              (String s, Integer i, String t)
+                => expectCondition(true),
+              (String s, Integer i, String t)
+                => expectCondition(true) })
+    }.run();
+    
+    assertEquals(specResult.size, 1);
+    assert(exists firstResults = specResult[0]);
+    assertEquals(firstResults.sequence(), [success].cycled.take(300).sequence());
+}
+
+test shared void limitedCountBadPropertyChecksShouldFail() {
+    value testSamples = 5;
+    {SpecResult*}[] specResult = Specification {
+        propertyCheck {
+            description = "test1";
+            testCount = testSamples;
+            when(String string) => [string.size];
+            assertions = { (Integer len) => expect(len, largerThan(100M)) };
+        }
+    }.run();
+    
+    assertEquals(specResult.size, 1);
+    assert(exists firstResults = specResult.first);
+    assertTrue(firstResults.every((result) {
+        assert(is String result);
+        value pass = result.startsWith("Feature 'test1' failed: ") &&
+                result.contains(" is not larger than ");
+        if (!pass) {
+            print("FAILED: ``result``");
+        }
+        return pass;
+    }));
 }
