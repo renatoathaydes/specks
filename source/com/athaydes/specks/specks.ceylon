@@ -94,7 +94,7 @@ Block assertionsWithExamplesBlock<Where>(
     
     SpecResult[] applyExamples(AssertionResult(Where) when)
             => examples.collect((example) => specResult(() => when(example),
-                internalDescription, example));
+        internalDescription, example));
     
     return object satisfies Block {
         description = internalDescription;
@@ -171,7 +171,7 @@ shared Block errorCheck<Where = []>(
         return assertionsWithoutExamplesBlock(internalDescription, applyAssertion(when), assertions);
     } else {
         return assertionsWithExamplesBlock(internalDescription, assertions.collect(
-                (assertion) => applyAssertionToExample(assertion)), examples);
+            (assertion) => applyAssertionToExample(assertion)), examples);
     }
     
 }
@@ -186,48 +186,48 @@ shared Block propertyCheck<Result, Where>(
     Integer testCount = 100,
     "Input data generator functions"
     [Anything()+] generators = [() => generateStrings().first, () => generateIntegers().first])
-		given Where satisfies Anything[]
-		given Result satisfies Anything[]
-		=> let (desc = description) object satisfies Block {
-
-	description = desc;
-
-	Where exampleOf([Type<Anything>+] types) {
-		value typeGenerators = types.map((requiredType) {
-			value generator = generators.find((gen) {
-				value genReturnType = type(gen).typeArgumentList.first;
-				// support only single-instance generators for now
-				return if (exists genReturnType) then genReturnType.subtypeOf(requiredType)
-				else false;
-			});
-			if (!exists generator) {
-				throw Exception("No generator exists for type: ``requiredType``");
-			}
-			return generator;
-		});
-		
+        given Where satisfies Anything[]
+        given Result satisfies Anything[]
+        => let (desc = description) object satisfies Block {
+    
+    description = desc;
+    
+    Where exampleOf([Type<Anything>+] types) {
+        {Anything()+} typeGenerators = types.map((requiredType) {
+            Anything()? generator = generators.find((gen) {
+                Type<Anything>? genReturnType = type(gen).typeArgumentList.first;
+                // support only single-instance generators for now
+                return if (exists genReturnType) then genReturnType.subtypeOf(requiredType)
+                else false;
+            });
+            if (!exists generator) {
+                throw Exception("No generator exists for type: ``requiredType``");
+            }
+            return generator;
+        });
+        
         Tuple<Anything, Anything, Anything> typedTuple({Anything+} array) {
-        	if (exists second = array.rest.first) {
-        		return Tuple(array.first, typedTuple({ second }.chain(array.rest.rest)));
-        	}
-        	else {
-        		return Tuple(array.first, []);
-        	}
+            if (exists second = array.rest.first) {
+                return Tuple(array.first, typedTuple({ second }.chain(array.rest.rest)));
+            }
+            else {
+                return Tuple(array.first, []);
+            }
         }
-		
-		value instance = [ for (generate in typeGenerators) generate() ];
-		
-		value tuple = typedTuple(instance);
-		
-		"tuple must be an instance of Where because Where was introspected to create it"
-		assert(is Where tuple);
-		return tuple;
-	}
-	
-	value argTypes = TypeArgumentsChecker().argumentTypes(when);
-	value examples = (0:testCount).map((it) => exampleOf(argTypes));
-	
-	shared actual {SpecResult*} runTests()
-			=> feature<Where, Result>(when, assertions, description, examples).runTests();
-	
+        
+        [Anything+] instance = [ for (Anything() generate in typeGenerators) generate() ];
+        
+        Tuple<Anything,Anything,Anything> tuple = typedTuple(instance);
+        
+        "tuple must be an instance of Where because Where was introspected to create it"
+        assert(is Where tuple);
+        return tuple;
+    }
+    
+    [Type<Anything>+] argTypes = TypeArgumentsChecker().argumentTypes(when);
+    {Where*} examples = (0:testCount).map((it) => exampleOf(argTypes));
+    
+    shared actual {SpecResult*} runTests()
+            => feature<Where, Result>(when, assertions, description, examples).runTests();
+    
 };
