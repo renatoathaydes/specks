@@ -176,6 +176,16 @@ shared Block errorCheck<Where = []>(
     
 }
 
+shared Block forAll<Where>(
+    Callable<AssertionResult, Where> assertion,
+    "Description of this feature."
+    String description = "",
+    Integer testCount = 100,
+    "Input data generator functions"
+    [Anything()+] generators = [() => generateStrings().first, () => generateIntegers().first])
+            given Where satisfies Anything[]
+        => propertyCheck((Where where) => [assertion(*where)], { identity<AssertionResult> }, description, testCount, generators);
+
 shared Block propertyCheck<Result, Where>(
     "The action being tested in this feature."
     Callable<Result, Where> when,
@@ -219,7 +229,8 @@ shared Block propertyCheck<Result, Where>(
         
         Tuple<Anything,Anything,Anything> tuple = typedTuple(instance);
         
-        "tuple must be an instance of Where because Where was introspected to create it"
+        "Tuple must be an instance of Where because Where was introspected to create it.
+         If you ever see this error, please report a bug on GitHub!"
         assert(is Where tuple);
         return tuple;
     }

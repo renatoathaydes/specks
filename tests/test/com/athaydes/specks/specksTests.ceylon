@@ -14,7 +14,8 @@ import com.athaydes.specks {
     success,
     feature,
     errorCheck,
-    propertyCheck
+    propertyCheck,
+    forAll
 }
 import com.athaydes.specks.assertion {
     expect,
@@ -149,6 +150,16 @@ test shared void errorCheckShouldFailWithExplanationMessageForEachExample() {
     assertEquals(errors[0], "ErrorCheck '``desc``' failed: expected ``platformIndependentName(`MutationException`)`` but threw ``Exception("Bad")`` [1, 2]");
     assertEquals(errors[1], "ErrorCheck '``desc``' failed: expected ``platformIndependentName(`MutationException`)`` but threw ``Exception("Bad")`` [3, 4]");
     assertEquals(errors[2], "ErrorCheck failed: no Exception thrown");
+}
+
+test shared void trivialForAllTestShouldSucceed() {
+    {SpecResult*}[] specResult = Specification {
+        forAll((String s) => expect(s.size, largerThan(-1)))
+    }.run();
+    
+    assertEquals(specResult.size, 1);
+    assert(exists firstResults = specResult.first);
+    assertEquals(firstResults.sequence(), [success].cycled.take(100).sequence());
 }
 
 test shared void trivialPropertyChecksShouldSucceed() {
