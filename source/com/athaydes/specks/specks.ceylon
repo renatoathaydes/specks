@@ -2,12 +2,16 @@ import ceylon.language.meta {
     type
 }
 import ceylon.language.meta.model {
-    Type
+    Type,
+    Generic
 }
 
 import com.athaydes.specks.assertion {
     AssertionResult,
     AssertionFailure
+}
+import com.vasileff.ceylon.random.api {
+    randomize
 }
 
 "The result of running a Specification which fails or causes an error.
@@ -177,14 +181,18 @@ shared Block errorCheck<Where = []>(
 }
 
 shared Block forAll<Where>(
+    "Single assertion which should hold for all possible inputs of a given function"
     Callable<AssertionResult, Where> assertion,
     "Description of this feature."
     String description = "",
-    Integer testCount = 100,
+    "Number of sample inputs to run tests with"
+    Integer sampleCount = 100,
     "Input data generator functions"
-    [Anything()+] generators = [() => generateStrings().first, () => generateIntegers().first])
-            given Where satisfies Anything[]
-        => propertyCheck((Where where) => [assertion(*where)], { identity<AssertionResult> }, description, testCount, generators);
+    [Anything()+] generators = [randomStrings, rangeOfIntegers])
+        given Where satisfies Anything[]
+        => propertyCheck(flatten((Where where) => [assertion(*where)]),
+                { identity<AssertionResult> }, 
+                    description, sampleCount, generators);
 
 shared Block propertyCheck<Result, Where>(
     "The action being tested in this feature."
@@ -193,27 +201,54 @@ shared Block propertyCheck<Result, Where>(
     {Callable<AssertionResult,Result>+} assertions,
     "Description of this feature."
     String description = "",
-    Integer testCount = 100,
+    "Number of sample inputs to run tests with"
+    Integer sampleCount = 100,
     "Input data generator functions"
-    [Anything()+] generators = [() => generateStrings().first, () => generateIntegers().first])
+    [Anything()+] generators = [randomStrings, rangeOfIntegers])
         given Where satisfies Anything[]
         given Result satisfies Anything[]
         => let (desc = description) object satisfies Block {
     
     description = desc;
     
+    Anything()? iterableToInstanceGeneratorFor(
+        Type<Anything> requiredType, 
+        Type<Anything> genReturnType,
+        Anything() generator) {
+        if (genReturnType.subtypeOf(`Iterable<>`)) {
+            "Specks currently only supports generators that produce Iterables whose
+             elements type argument is the first one, such as [[List<Element>]]."
+            assert(is Generic genReturnType);
+            Type<Anything>? elementsType = genReturnType.typeArgumentList[0];
+            
+            if (exists elementsType, elementsType.subtypeOf(requiredType)) {
+                assert(is {Anything*}() generator);
+                {{Anything*}+} infiniteGenerator = { generator() }.cycled;
+                return infiniteGenerator.flatMap(identity).iterator().next;
+            }
+        }
+        return null;
+    }
+    
     Where exampleOf([Type<Anything>+] types) {
         {Anything()+} typeGenerators = types.map((requiredType) {
-            Anything()? generator = generators.find((gen) {
+            [Anything()*] acceptableGenerators = generators.map((gen) {
                 Type<Anything>? genReturnType = type(gen).typeArgumentList.first;
-                // support only single-instance generators for now
-                return if (exists genReturnType) then genReturnType.subtypeOf(requiredType)
-                else false;
-            });
-            if (!exists generator) {
-                throw Exception("No generator exists for type: ``requiredType``");
+                if (exists genReturnType) {
+                    return if (genReturnType.subtypeOf(requiredType))
+                    then gen
+                    else iterableToInstanceGeneratorFor(requiredType, genReturnType, gen);
+                }
+                return null;
+            }).coalesced.sequence();
+            
+            if (acceptableGenerators.empty) {
+                throw Exception("No generator exists for type: ``requiredType``.
+                                 Add a generator function for the required type.");
             }
-            return generator;
+            Anything()? result = randomize(acceptableGenerators).first;
+            assert(exists result);
+            return result;
         });
         
         Tuple<Anything, Anything, Anything> typedTuple({Anything+} array) {
@@ -236,7 +271,7 @@ shared Block propertyCheck<Result, Where>(
     }
     
     [Type<Anything>+] argTypes = TypeArgumentsChecker().argumentTypes(when);
-    {Where*} examples = (0:testCount).map((it) => exampleOf(argTypes));
+    {Where*} examples = (0:sampleCount).map((it) => exampleOf(argTypes));
     
     shared actual {SpecResult*} runTests()
             => feature<Where, Result>(when, assertions, description, examples).runTests();

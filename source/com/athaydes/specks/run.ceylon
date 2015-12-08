@@ -76,7 +76,7 @@ shared void run() {
         },
         feature {
             description = "Using generated examples";
-            examples = { generateIntegers().sequence() };
+            examples = { rangeOfIntegers().sequence() };
             when(Integer* ints) => sort(ints);
             (Integer* ints) => expect(ints, sorted<Integer>{ ascending = true; })
         },

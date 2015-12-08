@@ -9,7 +9,7 @@ import com.vasileff.ceylon.random.api {
  The generated values are appropriate for tests - an attempt is made
  to include boundary values and uniformly distribute the values."
 throws(`class Exception`, "if count is smaller than 1 or lowerBound > higherBound")
-shared {Integer+} generateIntegers(
+shared {Integer+} rangeOfIntegers(
 	"the number of integers to generate - must be positive"
 	Integer count = 100,
 	"the lower bound, or lowest value that should be generated"
@@ -57,7 +57,7 @@ shared {Integer+} generateIntegers(
 
 "Generates random Strings."
 throws(`class Exception`, "if count is smaller than 1 or longest < shortest")
-shared {String+} generateStrings(
+shared {String+} randomStrings(
 	"the number of Strings to generate - must be positive"
 	Integer count = 100,
 	"the lower bound for the String size"

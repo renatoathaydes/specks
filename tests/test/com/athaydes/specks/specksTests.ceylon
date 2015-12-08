@@ -154,12 +154,15 @@ test shared void errorCheckShouldFailWithExplanationMessageForEachExample() {
 
 test shared void trivialForAllTestShouldSucceed() {
     {SpecResult*}[] specResult = Specification {
-        forAll((String s) => expect(s.size, largerThan(-1)))
+        forAll((String s) => expect(s.size, largerThan(-1))),
+        forAll((String s, Integer i) => expect(s.size, largerThan(-1)))
     }.run();
     
-    assertEquals(specResult.size, 1);
+    assertEquals(specResult.size, 2);
     assert(exists firstResults = specResult.first);
     assertEquals(firstResults.sequence(), [success].cycled.take(100).sequence());
+    assert(exists secondResults = specResult.last);
+    assertEquals(secondResults.sequence(), [success].cycled.take(100).sequence());
 }
 
 test shared void trivialPropertyChecksShouldSucceed() {
@@ -179,7 +182,7 @@ test shared void limitedCountPropertyChecksShouldSucceed() {
     {SpecResult*}[] specResult = Specification {
         propertyCheck {
             description = "test1";
-            testCount = testSamples;
+            sampleCount = testSamples;
             when(String string) => [string.size];
             assertions = { (Integer len) => expect(len, largerThan(-1)) };
         }
@@ -213,7 +216,7 @@ test shared void limitedCountBadPropertyChecksShouldFail() {
     {SpecResult*}[] specResult = Specification {
         propertyCheck {
             description = "test1";
-            testCount = testSamples;
+            sampleCount = testSamples;
             when(String string) => [string.size];
             assertions = { (Integer len) => expect(len, largerThan(100M)) };
         }
