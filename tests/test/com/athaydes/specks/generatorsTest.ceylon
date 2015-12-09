@@ -10,7 +10,8 @@ import com.athaydes.specks {
     SpecksTestExecutor,
     feature,
     errorCheck,
-    Block
+    Block,
+    randomIntegers
 }
 import com.athaydes.specks.assertion {
     expect,
@@ -28,7 +29,7 @@ import com.athaydes.specks.matcher {
 }
 
 void run() {
-    print(generatorOfIntegers().run());
+    print(rangeOfIntegersSpecification().run());
 }
 
 Integer[] countItemsAppearances({Object*} examples)
@@ -59,7 +60,7 @@ Block throwsExceptionWhenAskedToGenerateNegativeNumberOfExamples({Object*}(Integ
 
 testExecutor (`class SpecksTestExecutor`)
 test
-shared Specification generatorOfIntegers() => Specification {
+shared Specification rangeOfIntegersSpecification() => Specification {
     feature {
         description = "generated integer arrays are of expected size";
         examples = { [1], [3], [4], [5], [10], [100] };
@@ -105,7 +106,43 @@ shared Specification generatorOfIntegers() => Specification {
 
 testExecutor (`class SpecksTestExecutor`)
 test
-shared Specification generatorOfStrings() => Specification {
+shared Specification randomIntegersSpecification() => Specification {
+    feature {
+        description = "generated integer arrays are of expected size";
+        examples = { [1], [3], [4], [5], [10], [100] };
+        when(Integer max) => [max, randomIntegers { count = max; }.size];
+        (Integer max, Integer size) => expect(size, toBe(equalTo(max)))
+    },
+    generatesUniqueElementsFeature (
+        "each array of integers should be unique",
+        randomIntegers
+    ),
+    feature {
+        description = "the average of the generated integers should be close to 0";
+        examples = { [100k] };
+        (Integer max) => [average(randomIntegers { count = max; lowerBound = -100; higherBound = 100; })];
+        (Integer average) => expect(average, toBe(
+            smallerThan(10),
+            largerThan(-10)))
+    },
+    feature {
+        description = "generated integers to be within bounds";
+        examples = { [0, 10], [-10, 10], [-105, 543] };
+        when(Integer low, Integer high)
+                => [randomIntegers { lowerBound = low; higherBound = high; }, low, high];
+        // expectations
+        ({Integer+} ints, Integer low, Integer high)
+                => expect(ints.count((it) => it > high), toBe(equalTo(0))),
+        ({Integer+} ints, Integer low, Integer high)
+                => expect(ints.count((it) => it < low), toBe(equalTo(0)))
+    },
+    throwsExceptionWhenAskedToGenerateNegativeNumberOfExamples(randomIntegers)
+};
+
+
+testExecutor (`class SpecksTestExecutor`)
+test
+shared Specification randomStringsSpecification() => Specification {
     feature {
         description = "Generated Strings to be within size bounds";
         examples = { [0, 10], [1, 10], [105, 543], [21, 21] };

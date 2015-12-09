@@ -149,8 +149,6 @@ shared void run() {
     }
     ].collect((Specification speck) => print(speck.run()));
     
-    
-    
 }
 
 class BankAccount() {

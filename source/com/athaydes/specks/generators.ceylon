@@ -77,9 +77,9 @@ shared {Integer+} randomIntegers(
     }
     
     return let (samples = count) object satisfies {Integer+} {
-        shared actual Iterator<Integer> iterator()
-                => { random.nextInteger(higherBound - lowerBound) }
-                .take(samples).iterator();
+        value result = { lowerBound + random.nextInteger(higherBound - lowerBound) }
+                .cycled.take(samples);
+        iterator = result.iterator;
     };
 }
         
