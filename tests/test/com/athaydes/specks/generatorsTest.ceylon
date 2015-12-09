@@ -154,7 +154,7 @@ shared Specification randomStringsSpecification() => Specification {
     },
     generatesUniqueElementsFeature (
         "each element in the array of Strings generated should be unique",
-        randomStrings
+        (Integer max) => randomStrings { count = max; shortest = 5; }
     ),
     throwsExceptionWhenAskedToGenerateNegativeNumberOfExamples(randomStrings)
 };
