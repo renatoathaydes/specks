@@ -274,6 +274,6 @@ shared Block propertyCheck<Result, Where>(
     {Where*} examples = (0:sampleCount).map((it) => exampleOf(argTypes));
     
     shared actual {SpecResult*} runTests()
-            => feature<Where, Result>(when, assertions, description, examples).runTests();
+            => feature(when, assertions, description, examples).runTests();
     
 };
