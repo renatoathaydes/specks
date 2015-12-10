@@ -54,6 +54,18 @@ shared Matcher<Element> smallerThan<Element>(Element expected)
         given Element satisfies Comparable<Element>
         => ComparisonMatcher(expected, smaller);
 
+"A matcher that succeeds only if the actual value is, at most, the expected value
+ (in other words, the actual value must not be larger than the expected value)"
+shared Matcher<Element> atMost<Element>(Element expected)
+        given Element satisfies Comparable<Element>
+        => not(largerThan(expected));
+
+"A matcher that succeeds only if the actual value is, at least, the expected value
+ (in other words, the actual value must not be smaller than the expected value)"
+shared Matcher<Element> atLeast<Element>(Element expected)
+        given Element satisfies Comparable<Element>
+        => not(smallerThan(expected));
+
 "A matcher that succeeds only if the actual value exists, ie. the expected value is not null."
 shared Matcher<Anything> exist = ExistenceMatcher { mustExist = true; };
 
