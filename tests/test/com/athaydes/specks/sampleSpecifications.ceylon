@@ -54,7 +54,8 @@ shared class Samples() {
     
     test
     shared Specification propertyBasedSpec() => Specification {
-        forAll((String sample, Integer n) => expect(sample.take(n).size, toBe(atMost(n))))
+        forAll((String sample, Integer n)
+            => expect(sample.take(n).size, toBe(atMost(n < 0 then 0 else n))))
     };
     
     test

@@ -60,7 +60,8 @@ Luckily, `specks` has great support for *quickCheck*-style testing:
 ```ceylon
 test
 shared Specification propertyBasedSpec() => Specification {
-    forAll((String sample, Integer n) => expect(sample.take(n).size, toBe(atMost(n))))
+    forAll((String sample, Integer n)
+        => expect(sample.take(n).size, toBe(atMost(n < 0 then 0 else n))))
 };
 ```
 
