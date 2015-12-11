@@ -57,7 +57,10 @@ shared class Specification(
     return result;
 }
 
-SpecResult specResult(AssertionResult() applyAssertion, String description, Anything[] where) {
+SpecResult specResult(
+    AssertionResult() applyAssertion,
+    String description,
+    Anything[] where) {
     try {
         AssertionResult result = applyAssertion();
         switch (result)
@@ -86,7 +89,9 @@ Block assertionsWithoutExamplesBlock<Result>(
     return object satisfies Block {
         description = internalDescription;
         
-        runTests() => assertSpecResultsExist(assertions.collect((assertion) => specResult(apply(assertion), description, [])));
+        runTests() => assertSpecResultsExist(
+            assertions.collect((assertion)
+                => specResult(apply(assertion), description, [])));
     };
 }
 
@@ -103,9 +108,11 @@ Block assertionsWithExamplesBlock<Where>(
     return object satisfies Block {
         description = internalDescription;
         
-        runTests() => assertSpecResultsExist(assertions.flatMap(applyExamples).sequence());
+        runTests() => assertSpecResultsExist(
+            assertions.flatMap(applyExamples).sequence());
         
-        string = "[``description`` - ``assertions.size`` assertions, ``examples.size`` examples]";
+        string = "[``description`` - ``assertions.size``\
+                   assertions, ``examples.size`` examples]";
     };
 }
 
@@ -138,10 +145,12 @@ shared Block feature<out Where = [], in Result = Where>(
         "If you do not provide any examples, your 'when' function must not take any parameters."
         assert (is Callable<Result,[]> when);
         return assertionsWithoutExamplesBlock(internalDescription,
-            (Callable<AssertionResult,Result> assertion) => () => assertion(*when()), assertions);
+            (Callable<AssertionResult,Result> assertion)
+                    => () => assertion(*when()), assertions);
     } else {
         return assertionsWithExamplesBlock(internalDescription,
-            assertions.collect((assertion) => (Where example) => assertion(*when(*example))), examples);
+            assertions.collect((assertion)
+                => (Where example) => assertion(*when(*example))), examples);
     }
 }
 
@@ -155,7 +164,9 @@ shared Block errorCheck<Where = []>(
     {Where*} examples = [])
         given Where satisfies Anything[] {
     
-    AssertionResult() applyAssertion(Anything() when)(AssertionResult(Throwable?) assertion) {
+    AssertionResult() applyAssertion
+    (Anything() when)
+    (AssertionResult(Throwable?) assertion) {
         try {
             when();
             return () => assertion(success);
@@ -164,7 +175,9 @@ shared Block errorCheck<Where = []>(
         }
     }
     
-    AssertionResult applyAssertionToExample(AssertionResult(Throwable?) assertion)(Where example)
+    AssertionResult applyAssertionToExample
+    (AssertionResult(Throwable?) assertion)
+    (Where example)
             => applyAssertion(() => when(*example))(assertion)();
     
     String internalDescription = blockDescription("ErrorCheck", description);
@@ -172,10 +185,16 @@ shared Block errorCheck<Where = []>(
     if (examples.empty) {
         "If you do not provide any examples, your 'when' function must not take any parameters."
         assert (is Callable<Anything,[]> when);
-        return assertionsWithoutExamplesBlock(internalDescription, applyAssertion(when), assertions);
+        return assertionsWithoutExamplesBlock(
+            internalDescription,
+            applyAssertion(when),
+            assertions);
     } else {
-        return assertionsWithExamplesBlock(internalDescription, assertions.collect(
-            (assertion) => applyAssertionToExample(assertion)), examples);
+        return assertionsWithExamplesBlock(
+            internalDescription, 
+            assertions.collect((assertion)
+                => applyAssertionToExample(assertion)),
+            examples);
     }
     
 }
@@ -253,7 +272,8 @@ shared Block propertyCheck<Result, Where>(
         
         Tuple<Anything, Anything, Anything> typedTuple({Anything+} array) {
             if (exists second = array.rest.first) {
-                return Tuple(array.first, typedTuple({ second }.chain(array.rest.rest)));
+                return Tuple(array.first,
+                    typedTuple({ second }.chain(array.rest.rest)));
             }
             else {
                 return Tuple(array.first, []);
@@ -271,7 +291,9 @@ shared Block propertyCheck<Result, Where>(
     }
     
     [Type<Anything>+] argTypes = TypeArgumentsChecker().argumentTypes(when);
-    {Where*} examples = (0:sampleCount).map((it) => exampleOf(argTypes));
+    
+    {Where*} examples = (0:sampleCount).map((it)
+        => exampleOf(argTypes));
     
     shared actual {SpecResult*} runTests()
             => feature(when, assertions, description, examples).runTests();

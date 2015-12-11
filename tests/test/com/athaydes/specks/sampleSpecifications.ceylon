@@ -1,8 +1,8 @@
 import ceylon.test {
     test,
-    testExecutor,
-    assertTrue
+    testExecutor
 }
+
 import com.athaydes.specks {
     SpecksTestExecutor,
     Specification,
