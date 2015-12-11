@@ -18,7 +18,8 @@ import com.athaydes.specks.assertion {
 import com.athaydes.specks.matcher {
     equalTo,
     atMost,
-    toBe
+    toBe,
+    atLeast
 }
 
 testExecutor (`class SpecksTestExecutor`)
@@ -81,6 +82,11 @@ shared class Samples() {
             when(Integer a, Integer b, Integer c) => [(a + b) + c, a + (b + c)];
             (Integer left, Integer right) => expect(left, equalTo(right))
         }
+    };
+    
+    test
+    shared Specification failedSpec() => Specification {
+        forAll((String s) => expect(s.size, atLeast(10)))
     };
     
 }

@@ -45,7 +45,7 @@ shared Matcher<Element> not<Element>(
     "The matcher whose result is to be reversed."
     Matcher<Element> wrappedMatcher,
     "An optional error message to display on failure."
-    String? errorMessage = null)
+    String(Element)? errorMessage = null)
         => WrapperMatcher {
             wrappedMatcher;
             reverseResult = true;
@@ -66,13 +66,15 @@ shared Matcher<Element> smallerThan<Element>(Element expected)
  (in other words, the actual value must not be larger than the expected value)"
 shared Matcher<Element> atMost<Element>(Element expected)
         given Element satisfies Comparable<Element>
-        => not(largerThan(expected), "not at most ``expected``");
+        => not(largerThan(expected), (Element actual)
+            => "``actual`` not at most ``expected``");
 
 "A matcher that succeeds only if the actual value is, at least, the expected value
  (in other words, the actual value must not be smaller than the expected value)"
 shared Matcher<Element> atLeast<Element>(Element expected)
         given Element satisfies Comparable<Element>
-        => not(smallerThan(expected), "not at least '``expected``'");
+        => not(smallerThan(expected), (Element actual)
+            => "``actual`` not at least '``expected``'");
 
 "A matcher that succeeds only if the actual value exists, ie. the expected value is not null."
 shared Matcher<Anything> exist = ExistenceMatcher { mustExist = true; };
@@ -196,14 +198,16 @@ class AndMatcher<Element>(Matcher<Element>+ matchers)
 class WrapperMatcher<Element>(
     Matcher<Element> wrappedMatcher, 
     Boolean reverseResult,
-    String? message = null)
+    String(Element)? message = null)
         satisfies Matcher<Element> {
     
     shared actual AssertionResult matches(Element actual) {
         value result = wrappedMatcher.matches(actual);
         if (reverseResult) {
             if (is Null result) {
-                return message else "should have failed";
+                return if (exists message)
+                then message(actual)
+                else "should have failed";
             } else {
                 return success;
             }
