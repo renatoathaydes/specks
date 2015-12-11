@@ -131,6 +131,25 @@ test shared void featuresShouldFailWithExplanationMessageForFailedExamples() {
     ]);
 }
 
+test shared void featuresShouldStopAfterFailingTooManyTimes() {
+    {SpecResult*}[] specResult = Specification {
+        feature {
+            maxFailuresAllowed = 4;
+            examples = (1..100).map((i) => [i]);
+            when(Integer i) => if (i > 10) then ["FAIL"] else [success];
+            (String? result) => result
+        }
+    }.run();
+    
+    assertEquals(flatten(specResult).sequence(), 
+        (1..10).collect((i) => success).append([
+            "Feature failed: FAIL [11]",
+            "Feature failed: FAIL [12]",
+            "Feature failed: FAIL [13]",
+            "Feature failed: FAIL [14]"
+        ]));
+}
+
 test shared void errorCheckShouldFailWithExplanationMessageForEachExample() {
     String desc = "throw this bad";
     {SpecResult*}[] specResult = Specification {

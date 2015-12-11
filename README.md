@@ -160,6 +160,9 @@ of the assertion function(s).
 All examples are run regardless of whether a previous example has failed, so that after a
 test is run, you know exactly which examples are ok and which are not.
 
+> All example-based Blocks have a `maxFailuresAllowed` parameter which can be used to
+  limit how many failures should be allowed before `specks` stops trying further examples.
+
 #### Example generators
 
 Additionally, you may use generator functions to create input for the test.
@@ -226,6 +229,7 @@ Or you can be more verbose when necessary:
 forAll {
     description = "The reverse of a reversed String is the String itself";
     sampleCount = 1k;
+    maxFailuresAllowed = 50;
     generators = [ randomStrings ];
     assertion(String sample) => expect(sample.reversed.reversed, equalTo(sample));
 }

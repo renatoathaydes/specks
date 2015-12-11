@@ -98,12 +98,26 @@ Block assertionsWithoutExamplesBlock<Result>(
 Block assertionsWithExamplesBlock<Where>(
     String internalDescription,
     AssertionResult(Where)[] assertions,
-    {Where*} examples)
+    {Where*} examples,
+    Integer maxFailuresAllowed)
         given Where satisfies Anything[] {
     
-    SpecResult[] applyExamples(AssertionResult(Where) when)
-            => examples.collect((example) => specResult(() => when(example),
-        internalDescription, example));
+    
+    SpecResult[] applyExamples(AssertionResult(Where) when) {
+        variable Integer failures = 0;
+        
+        SpecResult apply(Where example) {
+            value result = specResult(() => when(example), internalDescription, example);
+            if (result is SpecFailure) {
+                failures++;
+            }
+            return result;
+        }
+
+        return [ for (example in examples)
+            if (failures < maxFailuresAllowed) apply(example)
+        ];
+    }
     
     return object satisfies Block {
         description = internalDescription;
@@ -135,7 +149,9 @@ shared Block feature<out Where = [], in Result = Where>(
     String description = "",
     "Input examples.<p/>
      Each example will be passed to each assertion function in the order it is declared."
-    {Where*} examples = [])
+    {Where*} examples = [],
+    "Maximum number of failures to allow before stopping running more tests."
+    Integer maxFailuresAllowed = 10)
         given Where satisfies Anything[]
         given Result satisfies Anything[] {
     
@@ -148,9 +164,12 @@ shared Block feature<out Where = [], in Result = Where>(
             (Callable<AssertionResult,Result> assertion)
                     => () => assertion(*when()), assertions);
     } else {
-        return assertionsWithExamplesBlock(internalDescription,
+        return assertionsWithExamplesBlock(
+            internalDescription,
             assertions.collect((assertion)
-                => (Where example) => assertion(*when(*example))), examples);
+                => (Where example) => assertion(*when(*example))),
+            examples,
+            maxFailuresAllowed);
     }
 }
 
@@ -161,7 +180,9 @@ shared Block errorCheck<Where = []>(
     String description = "",
     "Input examples.<p/>
      Each example will be passed to each assertion function in the order it is declared."
-    {Where*} examples = [])
+    {Where*} examples = [],
+    "Maximum number of failures to allow before stopping running more tests."
+    Integer maxFailuresAllowed = 10)
         given Where satisfies Anything[] {
     
     AssertionResult() applyAssertion
@@ -194,7 +215,8 @@ shared Block errorCheck<Where = []>(
             internalDescription, 
             assertions.collect((assertion)
                 => applyAssertionToExample(assertion)),
-            examples);
+            examples,
+            maxFailuresAllowed);
     }
     
 }
@@ -207,11 +229,13 @@ shared Block forAll<Where>(
     "Number of sample inputs to run tests with"
     Integer sampleCount = 100,
     "Input data generator functions"
-    [Anything()+] generators = [randomStrings, rangeOfIntegers])
+    [Anything()+] generators = [randomStrings, rangeOfIntegers],
+    "Maximum number of failures to allow before stopping running more tests."
+    Integer maxFailuresAllowed = 10)
         given Where satisfies Anything[]
         => propertyCheck(flatten((Where where) => [assertion(*where)]),
                 { identity<AssertionResult> }, 
-                    description, sampleCount, generators);
+                    description, sampleCount, generators, maxFailuresAllowed);
 
 shared Block propertyCheck<Result, Where>(
     "The action being tested in this feature."
@@ -223,7 +247,9 @@ shared Block propertyCheck<Result, Where>(
     "Number of sample inputs to run tests with"
     Integer sampleCount = 100,
     "Input data generator functions"
-    [Anything()+] generators = [randomStrings, rangeOfIntegers])
+    [Anything()+] generators = [randomStrings, rangeOfIntegers],
+    "Maximum number of failures to allow before stopping running more tests."
+    Integer maxFailuresAllowed = 10)
         given Where satisfies Anything[]
         given Result satisfies Anything[]
         => let (desc = description) object satisfies Block {
@@ -296,6 +322,7 @@ shared Block propertyCheck<Result, Where>(
         => exampleOf(argTypes));
     
     shared actual {SpecResult*} runTests()
-            => feature(when, assertions, description, examples).runTests();
+            => feature(when, assertions, description,
+                examples, maxFailuresAllowed).runTests();
     
 };

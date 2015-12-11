@@ -1,6 +1,7 @@
 import ceylon.test {
     test,
-    testExecutor
+    testExecutor,
+    ignore
 }
 
 import com.athaydes.specks {
@@ -69,6 +70,7 @@ shared class Samples() {
         forAll {
             description = "The reverse of a reversed String is the String itself";
             sampleCount = 1k;
+            maxFailuresAllowed = 50;
             generators = [ randomStrings ];
             assertion(String sample) => expect(sample.reversed.reversed, equalTo(sample));
         }
@@ -84,7 +86,7 @@ shared class Samples() {
         }
     };
     
-    test
+    ignore test
     shared Specification failedSpec() => Specification {
         forAll((String s) => expect(s.size, atLeast(10)))
     };
