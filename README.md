@@ -28,7 +28,7 @@ asserted.
 test
 shared Specification aGoodSpec() => Specification {
     feature {
-        description = "The String.take() method returns at most n characters, for any given n > 0";
+        description = "The String.take() method returns at most n characters, for any given n >= 0";
         
         when(String sample, Integer n) => [sample.take(n), n];
         
@@ -81,7 +81,7 @@ To run a Specification using Ceylon's testing framework, you just need to annota
 
 ```ceylon
 testExecutor(`class SpecksTestExecutor`)
-shared package my.package;
+shared package my_package;
 ```
 
 > Notice that testExecutor support started with Ceylon 1.1.0, so you can't use this with 1.0
