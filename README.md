@@ -69,6 +69,9 @@ This test will run the given function with 100 different, randomly-chosen values
 
 > For more information about property-based testing, see the sections below for the `forAll` and `propertyCheck` functions.
 
+To see real examples of `specks` Specifications, just looks at `specks`' own
+[tests for its data generator functions](tests/test/com/athaydes/specks/generatorsTest.ceylon).
+
 ## Running tests with specks
 
 First of all, import Specks in your module.ceylon file:
