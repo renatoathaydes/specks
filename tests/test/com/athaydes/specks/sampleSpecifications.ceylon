@@ -91,4 +91,26 @@ shared class Samples() {
         forAll((String s) => expect(s.size, atLeast(10)))
     };
     
+    test
+    shared Specification customTypeGenerators() {
+        class MyCustomType(shared String arg) {}
+        
+        value infiniteStrings = { randomStrings() }.cycled.flatMap(identity).iterator();
+        
+        function generateRandomString() {
+            value next = infiniteStrings.next();
+            assert(is String next);
+            return next; 
+        }
+        
+        function generateCustomType() => MyCustomType(generateRandomString());
+        
+        return Specification {
+            forAll {
+                generators = [ generateCustomType ];
+                assertion(MyCustomType customType) => expect(customType.arg.size, atLeast(0));
+            }
+        };
+    }
+    
 }

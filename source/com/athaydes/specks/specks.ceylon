@@ -228,14 +228,21 @@ shared Block forAll<Where>(
     String description = "",
     "Number of sample inputs to run tests with"
     Integer sampleCount = 100,
-    "Input data generator functions"
-    [Anything()+] generators = [randomStrings, randomIntegers],
-    "Maximum number of failures to allow before stopping running more tests."
+    "Input data generator functions. If not given, uses default generators."
+    [Anything()+]? generators = null,
+	"Maximum number of failures to allow before stopping running more tests."
     Integer maxFailuresAllowed = 10)
         given Where satisfies Anything[]
         => propertyCheck(flatten((Where where) => [assertion(*where)]),
                 { identity<AssertionResult> }, 
                     description, sampleCount, generators, maxFailuresAllowed);
+
+[Anything()+] defaultGenerators() {
+	function collectionSize() => 1 + defaultRandom.nextInteger(100);
+	value forStrings = () => randomStrings(collectionSize());
+	value forIntegers = () => randomIntegers(collectionSize());
+	return [forStrings, forIntegers];
+}
 
 shared Block propertyCheck<Result, Where>(
     "The action being tested in this feature."
@@ -246,8 +253,8 @@ shared Block propertyCheck<Result, Where>(
     String description = "",
     "Number of sample inputs to run tests with"
     Integer sampleCount = 100,
-    "Input data generator functions"
-    [Anything()+] generators = [randomStrings, randomIntegers],
+    "Input data generator functions. If not given, uses default generators."
+    [Anything()+]? generators = null,
     "Maximum number of failures to allow before stopping running more tests."
     Integer maxFailuresAllowed = 10)
         given Where satisfies Anything[]
@@ -275,9 +282,11 @@ shared Block propertyCheck<Result, Where>(
         return null;
     }
     
+    value gens = generators else defaultGenerators();
+    
     Where exampleOf([Type<Anything>+] types) {
         {Anything()+} typeGenerators = types.map((requiredType) {
-            [Anything()*] acceptableGenerators = generators.map((gen) {
+            [Anything()*] acceptableGenerators = gens.map((gen) {
                 Type<Anything>? genReturnType = type(gen).typeArgumentList.first;
                 if (exists genReturnType) {
                     return if (genReturnType.subtypeOf(requiredType))

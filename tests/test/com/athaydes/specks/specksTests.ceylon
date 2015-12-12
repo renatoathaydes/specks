@@ -185,10 +185,22 @@ test shared void trivialForAllTestShouldSucceed() {
 }
 
 test shared void trivialPropertyChecksShouldSucceed() {
+	{SpecResult*}[] specResult = Specification {
+		propertyCheck(
+			(String string) => [string.size],
+			{ (Integer len) => expect(len, largerThan(-1)) })
+	}.run();
+	
+	assertEquals(specResult.size, 1);
+	assert(exists firstResults = specResult.first);
+	assertEquals(firstResults.sequence(), [success].cycled.take(100).sequence());
+}
+
+test shared void iterablePropertyChecksShouldSucceed() {
     {SpecResult*}[] specResult = Specification {
         propertyCheck(
-            (String string) => [string.size],
-            { (Integer len) => expect(len, largerThan(-1)) })
+            ({String*} strings) => [strings.size],
+            { (Integer len) => expect(len, atLeast(0)) })
     }.run();
 
     assertEquals(specResult.size, 1);

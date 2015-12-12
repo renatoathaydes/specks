@@ -252,6 +252,41 @@ propertyCheck {
 As in the `feature` block, the `when` function must return a tuple of values which will be passed as
 arguments to the assertion function(s).
 
+### generator functions
+
+Property-based tests require generator functions that can create input for the `when`
+function. If you need to test something that uses your custom types as input (or any
+type not supported by `specks` by default), you need to provide
+a generator function which returns instances of the custom type, or an `Iterable` with
+items of that type.
+
+For example:
+
+```ceylon
+test
+shared Specification customTypeGenerators() {
+
+    class MyCustomType(shared String arg) {}
+    
+    value infiniteStrings = { randomStrings() }.cycled.flatMap(identity).iterator();
+    
+    function generateRandomString() {
+        value next = infiniteStrings.next();
+        assert(is String next);
+        return next; 
+    }
+    
+    function generateCustomType() => MyCustomType(generateRandomString());
+    
+    return Specification {
+        forAll {
+            generators = [ generateCustomType ];
+            assertion(MyCustomType customType) => expect(customType.arg.size, atLeast(0));
+        }
+    };
+}
+```
+
 ## Asserting behavior
 
 As you can see in the examples above, all blocks have some kind of assertion(s).
