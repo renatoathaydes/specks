@@ -11,7 +11,8 @@ import com.athaydes.specks {
     feature,
     errorCheck,
     Block,
-    randomIntegers
+    randomIntegers,
+	randomFloats
 }
 import com.athaydes.specks.assertion {
     expect,
@@ -35,10 +36,10 @@ void run() {
 Integer[] countItemsAppearances({Object*} examples)
         => examples.collect((e1) => examples.count((e2) => e2 == e1));
 
-Integer average({Integer+} examples) {
-    value examplesSeq = examples.sequence();
-    assert(is [Integer+] examplesSeq);
-    value result = sum(examplesSeq) / examplesSeq.size;
+Num average<Num>({Num+} examples, Num(Integer) convert)
+		given Num satisfies Number<Num> {
+    value examplesSeq = [examples.first, *examples];
+    value result = sum(examplesSeq) / convert(examplesSeq.size);
     return result;
 }
 
@@ -74,7 +75,7 @@ shared Specification rangeOfIntegersSpecification() => Specification {
     feature {
         description = "the average of the generated integers should be close to 0";
         examples = { [1], [2], [3], [5], [10], [100] };
-        (Integer max) => [average(rangeOfIntegers(max))];
+        (Integer max) => [average(rangeOfIntegers(max), identity)];
         (Integer average) => expect(average, toBe(
             smallerThan(10), 
             largerThan(-10)))
@@ -120,7 +121,11 @@ shared Specification randomIntegersSpecification() => Specification {
     feature {
         description = "the average of the generated integers should be close to 0";
         examples = { [100k] };
-        (Integer max) => [average(randomIntegers { count = max; lowerBound = -100; higherBound = 100; })];
+        (Integer max) => [average(randomIntegers {
+            count = max;
+            lowerBound = -100;
+            higherBound = 100;
+        }, identity)];
         (Integer average) => expect(average, toBe(
             smallerThan(10),
             largerThan(-10)))
@@ -139,6 +144,44 @@ shared Specification randomIntegersSpecification() => Specification {
     throwsExceptionWhenAskedToGenerateNegativeNumberOfExamples(randomIntegers)
 };
 
+testExecutor (`class SpecksTestExecutor`)
+test
+shared Specification randomFloatsSpecification() => Specification {
+	feature {
+		description = "generated Floats arrays are of expected size";
+		examples = { [1], [3], [4], [5], [10], [100] };
+		when(Integer max) => [max, randomFloats { count = max; }.size];
+		(Integer max, Integer size) => expect(size, toBe(equalTo(max)))
+	},
+	generatesUniqueElementsFeature (
+		"each array of Floats should be unique",
+		randomFloats
+	),
+	feature {
+		description = "the average of the generated Floats should be close to 0";
+		examples = { [100k] };
+		(Integer max) => [average(randomFloats {
+			count = max;
+			lowerBound = -100.0;
+			higherBound = 100.0;
+		}, Integer.float)];
+		(Float average) => expect(average, toBe(
+			smallerThan(10.0),
+			largerThan(-10.0)))
+	},
+	feature {
+		description = "generated Floats to be within bounds";
+		examples = { [0.0, 10.0], [-10.0, 10.0], [-105.0, 543.0] };
+		when(Float low, Float high)
+				=> [randomFloats { lowerBound = low; higherBound = high; }, low, high];
+		// expectations
+		({Float+} ints, Float low, Float high)
+				=> expect(ints.count((it) => it > high), toBe(equalTo(0))),
+		({Float+} ints, Float low, Float high)
+				=> expect(ints.count((it) => it < low), toBe(equalTo(0)))
+	},
+	throwsExceptionWhenAskedToGenerateNegativeNumberOfExamples(randomFloats)
+};
 
 testExecutor (`class SpecksTestExecutor`)
 test

@@ -57,16 +57,44 @@ shared {Integer+} rangeOfIntegers(
     return IntsIterator(count);
 }
 
-"Generates random integers within the given bounds."
+
+"Generates pseudo-random integers within the given bounds."
 throws(`class Exception`, "if count is smaller than 1 or lowerBound > higherBound")
 shared {Integer+} randomIntegers(
-    "the number of integers to generate - must be positive"
+	"the number of integers to generate - must be positive"
+	Integer count = 100,
+	"the lower bound, or lowest value that should be generated"
+	Integer lowerBound = -1M,
+	"the higher bound, or maximum value that should be generated"
+	Integer higherBound = 1M,
+	"Random instance to use for generating Integers"
+	Random random = defaultRandom) {
+	
+	if (count < 1) {
+		throw Exception("Count must be positive");
+	}
+	if (lowerBound > higherBound) {
+		throw Exception("Lower bound must not be larger than higher bound");
+	}
+	
+	return let (samples = count) object satisfies {Integer+} {
+		value result = { lowerBound + random.nextInteger(higherBound - lowerBound) }
+				.cycled.take(samples);
+				iterator = result.iterator;
+			};
+		}
+
+
+"Generates pseudo-random Floats within the given bounds."
+throws(`class Exception`, "if count is smaller than 1 or lowerBound > higherBound")
+shared {Float+} randomFloats(
+    "the number of Floats to generate - must be positive"
     Integer count = 100,
     "the lower bound, or lowest value that should be generated"
-    Integer lowerBound = -1M,
+    Float lowerBound = -1.0M,
     "the higher bound, or maximum value that should be generated"
-    Integer higherBound = 1M,
-    "Random instance to use for generating Integers"
+    Float higherBound = 1.0M,
+    "Random instance to use for generating Floats"
     Random random = defaultRandom) {
     
     if (count < 1) {
@@ -76,14 +104,15 @@ shared {Integer+} randomIntegers(
         throw Exception("Lower bound must not be larger than higher bound");
     }
     
-    return let (samples = count) object satisfies {Integer+} {
-        value result = { lowerBound + random.nextInteger(higherBound - lowerBound) }
+    return let (samples = count) object satisfies {Float+} {
+        value totalRange = (higherBound - lowerBound).magnitude;
+        value result = { lowerBound + (random.nextFloat() * totalRange ) }
                 .cycled.take(samples);
         iterator = result.iterator;
     };
 }
         
-"Generates random Strings."
+"Generates pseudo-random Strings."
 throws(`class Exception`, "if count is smaller than 1 or longest < shortest")
 shared {String+} randomStrings(
     "the number of Strings to generate - must be positive"
