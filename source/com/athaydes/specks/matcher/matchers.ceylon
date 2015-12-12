@@ -41,8 +41,16 @@ shared Matcher<Element> toBe<Element>(Matcher<Element>+ wrappedMatchers)
      expect(actual, not(to(exist)));
      expect([1,2,3], not(to(contain(10))));
  </code>"
-shared Matcher<Element> not<Element>(Matcher<Element> wrappedMatcher)
-        => WrapperMatcher { wrappedMatcher; reverseResult = true; };
+shared Matcher<Element> not<Element>(
+    "The matcher whose result is to be reversed."
+    Matcher<Element> wrappedMatcher,
+    "An optional error message to display on failure."
+    String(Element)? errorMessage = null)
+        => WrapperMatcher {
+            wrappedMatcher;
+            reverseResult = true;
+            message = errorMessage;
+        };
 
 "A matcher that succeeds only if the actual value is larger than the expected value"
 shared Matcher<Element> largerThan<Element>(Element expected)
@@ -53,6 +61,20 @@ shared Matcher<Element> largerThan<Element>(Element expected)
 shared Matcher<Element> smallerThan<Element>(Element expected)
         given Element satisfies Comparable<Element>
         => ComparisonMatcher(expected, smaller);
+
+"A matcher that succeeds only if the actual value is, at most, the expected value
+ (in other words, the actual value must not be larger than the expected value)"
+shared Matcher<Element> atMost<Element>(Element expected)
+        given Element satisfies Comparable<Element>
+        => not(largerThan(expected), (Element actual)
+            => "``actual`` not at most ``expected``");
+
+"A matcher that succeeds only if the actual value is, at least, the expected value
+ (in other words, the actual value must not be smaller than the expected value)"
+shared Matcher<Element> atLeast<Element>(Element expected)
+        given Element satisfies Comparable<Element>
+        => not(smallerThan(expected), (Element actual)
+            => "``actual`` not at least '``expected``'");
 
 "A matcher that succeeds only if the actual value exists, ie. the expected value is not null."
 shared Matcher<Anything> exist = ExistenceMatcher { mustExist = true; };
@@ -173,14 +195,19 @@ class AndMatcher<Element>(Matcher<Element>+ matchers)
     
 }
 
-class WrapperMatcher<Element>(Matcher<Element> wrappedMatcher, Boolean reverseResult)
+class WrapperMatcher<Element>(
+    Matcher<Element> wrappedMatcher, 
+    Boolean reverseResult,
+    String(Element)? message = null)
         satisfies Matcher<Element> {
     
     shared actual AssertionResult matches(Element actual) {
         value result = wrappedMatcher.matches(actual);
         if (reverseResult) {
             if (is Null result) {
-                return "should have failed";
+                return if (exists message)
+                then message(actual)
+                else "should have failed";
             } else {
                 return success;
             }
