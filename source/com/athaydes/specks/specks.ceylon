@@ -241,7 +241,9 @@ shared Block forAll<Where>(
 	function collectionSize() => 1 + defaultRandom.nextInteger(100);
 	value forStrings = () => randomStrings(collectionSize());
 	value forIntegers = () => randomIntegers(collectionSize());
-	return [forStrings, forIntegers];
+	value forFloats = () => randomFloats(collectionSize());
+	value forBooleans = () => randomBooleans(collectionSize());
+	return [forStrings, forIntegers, forFloats, forBooleans];
 }
 
 shared Block propertyCheck<Result, Where>(
