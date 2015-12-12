@@ -189,9 +189,20 @@ Additionally, you may use generator functions to create input for the test.
 				[Character+] allowedChars = '\{#20}'..'\{#7E}',
 				Random random = defaultRandom)`: generates a random stream of Strings according to the parameters given.
 
+* `{Float+} randomFloats(
+    Integer count = 100,
+    Float lowerBound = -1.0M,
+    Float higherBound = 1.0M,
+    Random random = defaultRandom)`: generates a random stream of Floats.
+    
+* `{Boolean+} randomBooleans(
+	Integer count = 100,
+	Random random = defaultRandom)`: generates a random stream of Booleans.
+
 > the excellent [ceylon-random](https://github.com/jvasileff/ceylon-random),
-  library, by @jvasileff, is used to generate random Strings. The default Random instance
-  just delegates to the platform-specific pseudo-random generator.
+  library, by @jvasileff, is used to generate random values.
+  Notice that everywhere random is mentioned, it should be read as **pseudo-random**.
+  The default Random instance just delegates to the platform-specific random generator.
 
 ### errorCheck
 
