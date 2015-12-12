@@ -12,7 +12,8 @@ import com.athaydes.specks {
     errorCheck,
     Block,
     randomIntegers,
-	randomFloats
+	randomFloats,
+	randomBooleans
 }
 import com.athaydes.specks.assertion {
     expect,
@@ -181,6 +182,30 @@ shared Specification randomFloatsSpecification() => Specification {
 				=> expect(ints.count((it) => it < low), toBe(equalTo(0)))
 	},
 	throwsExceptionWhenAskedToGenerateNegativeNumberOfExamples(randomFloats)
+};
+
+
+testExecutor (`class SpecksTestExecutor`)
+test
+shared Specification randomBooleansSpecification() => Specification {
+	feature {
+		description = "generated Boolean arrays are of expected size";
+		examples = { [1], [3], [4], [5], [10], [100] };
+		when(Integer max) => [max, randomBooleans { count = max; }.size];
+		(Integer max, Integer size) => expect(size, toBe(equalTo(max)))
+	},
+	feature {
+		description = "Generated Booleans are 50% true, 50% false for a sufficiently \
+		               large sample, with an allowed margin of error of 1%";
+		examples = { [100k, 1k] };
+		(Integer max, Integer margin) => [randomBooleans(max), max / 2, margin];
+		({Boolean+} result, Integer half, Integer margin)
+				=> expect(result.count(true.equals), toBe(
+					smallerThan(half + margin),
+					largerThan(half - margin)
+		))
+	},
+	throwsExceptionWhenAskedToGenerateNegativeNumberOfExamples(randomBooleans)
 };
 
 testExecutor (`class SpecksTestExecutor`)

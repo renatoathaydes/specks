@@ -111,7 +111,23 @@ shared {Float+} randomFloats(
         iterator = result.iterator;
     };
 }
-        
+
+"Generates pseudo-random Boolean values."
+throws(`class Exception`, "if count is smaller than 1")
+shared {Boolean+} randomBooleans(
+	"the number of Booleans to generate - must be positive"
+	Integer count = 100,
+	"Random instance to use for generating Booleans"
+	Random random = defaultRandom) {
+	
+	if (count < 1) {
+		throw Exception("Count must be positive");
+	}
+	
+	return { random.nextBoolean() }.chain(
+		{ random.nextBoolean() }.cycled.take(count - 1));
+}
+
 "Generates pseudo-random Strings."
 throws(`class Exception`, "if count is smaller than 1 or longest < shortest")
 shared {String+} randomStrings(
