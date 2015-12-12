@@ -229,7 +229,7 @@ shared Block forAll<Where>(
     "Number of sample inputs to run tests with"
     Integer sampleCount = 100,
     "Input data generator functions"
-    [Anything()+] generators = [randomStrings, rangeOfIntegers],
+    [Anything()+] generators = [randomStrings, randomIntegers],
     "Maximum number of failures to allow before stopping running more tests."
     Integer maxFailuresAllowed = 10)
         given Where satisfies Anything[]
@@ -247,7 +247,7 @@ shared Block propertyCheck<Result, Where>(
     "Number of sample inputs to run tests with"
     Integer sampleCount = 100,
     "Input data generator functions"
-    [Anything()+] generators = [randomStrings, rangeOfIntegers],
+    [Anything()+] generators = [randomStrings, randomIntegers],
     "Maximum number of failures to allow before stopping running more tests."
     Integer maxFailuresAllowed = 10)
         given Where satisfies Anything[]
