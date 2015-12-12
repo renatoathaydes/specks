@@ -29,7 +29,7 @@ shared alias SpecResult => SpecFailure|SpecSuccess;
 shared SpecSuccess success = null;
 
 "Most generic kind of block which forms a [[Specification]]."
-shared sealed
+shared
 interface Block {
     shared formal String description;
     shared formal {SpecResult*} runTests();
