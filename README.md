@@ -77,7 +77,7 @@ To see real examples of `specks` Specifications, just looks at `specks`' own
 First of all, import Specks in your module.ceylon file:
 
 ```ceylon
-import com.athaydes.specks "0.3.0"
+import com.athaydes.specks "0.4.0"
 ```
 
 To run a Specification using Ceylon's testing framework, you just need to annotate your function/class/package/module with the ``testExecutor`` annotation so the test will be run using the ``SpecksTestExecutor``:
@@ -202,10 +202,8 @@ Additionally, you may use generator functions to create input for the test.
 	Integer count = 100,
 	Random random = defaultRandom)`: generates a random stream of Booleans.
 
-> the excellent [ceylon-random](https://github.com/jvasileff/ceylon-random),
-  library, by @jvasileff, is used to generate random values.
+> `Random` is provided by `ceylon.random`.
   Notice that everywhere random is mentioned, it should be read as **pseudo-random**.
-  The default Random instance just delegates to the platform-specific random generator.
 
 ### errorCheck
 
