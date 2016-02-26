@@ -4,7 +4,6 @@ import ceylon.language.meta.model {
 import ceylon.test {
     test,
     assertEquals,
-    equalsCompare,
     assertTrue
 }
 
@@ -68,11 +67,11 @@ test shared void happySpecificationThatPassesAllTests() {
             expectToThrow(`Exception`)
         }
     }.run();
-    
+
     print(specResult);
     assertEquals(specResult.size, 4);
     assertEquals(specResult.collect((results) => results.size), [6, 4, 4, 2]);
-    assert(flatten(specResult).every((result) => equalsCompare(result, success)));
+    flatten(specResult).each((result) => assertEquals(result, success));
 }
 
 String asString(SpecResult result) => result?.string else "success";
@@ -95,12 +94,12 @@ test shared void featuresShouldFailWithExplanationMessage() {
     }.run();
 
     assertEquals(flatten(specResult).map(asString).sequence(), [
-        "Feature 'should fail with explanation message' failed: 3 is not larger than 4",
-        "Feature 'should fail with explanation message' failed: 1 is not equal to 2",
-        "Feature 'should fail with explanation message' failed: 10 is not smaller than 9",
+        "\nFeature 'should fail with explanation message' failed: 3 is not larger than 4",
+        "\nFeature 'should fail with explanation message' failed: 1 is not equal to 2",
+        "\nFeature 'should fail with explanation message' failed: 10 is not smaller than 9",
         Exception().string,
-        "Feature 'should fail with explanation message' failed: expected to exist but was null",
-        "Feature 'should fail with explanation message' failed: expected true but was false"
+        "\nFeature 'should fail with explanation message' failed: expected to exist but was null",
+        "\nFeature 'should fail with explanation message' failed: expected true but was false"
     ]);
 }
 
@@ -122,10 +121,10 @@ test shared void featuresShouldFailWithExplanationMessageForFailedExamples() {
     }.run();
 
     assertEquals(flatten(specResult).map(asString).sequence(), [
-        "Feature 'desc' failed: a is not larger than b [a, b]",
-        "Feature 'desc' failed: c is not larger than d [c, d]",
-        "Feature 'desc' failed: a is not equal to b [a, b]",
-        "Feature 'desc' failed: c is not equal to d [c, d]",
+        "\nFeature 'desc' failed: a is not larger than b [a, b]",
+        "\nFeature 'desc' failed: c is not larger than d [c, d]",
+        "\nFeature 'desc' failed: a is not equal to b [a, b]",
+        "\nFeature 'desc' failed: c is not equal to d [c, d]",
         "success",
         Exception().string
     ]);
@@ -140,13 +139,13 @@ test shared void featuresShouldStopAfterFailingTooManyTimes() {
             (String? result) => result
         }
     }.run();
-    
-    assertEquals(flatten(specResult).sequence(), 
+
+    assertEquals(flatten(specResult).sequence(),
         (1..10).collect((i) => success).append([
-            "Feature failed: FAIL [11]",
-            "Feature failed: FAIL [12]",
-            "Feature failed: FAIL [13]",
-            "Feature failed: FAIL [14]"
+            "\nFeature failed: FAIL [11]",
+            "\nFeature failed: FAIL [12]",
+            "\nFeature failed: FAIL [13]",
+            "\nFeature failed: FAIL [14]"
         ]));
 }
 
@@ -164,11 +163,11 @@ test shared void errorCheckShouldFailWithExplanationMessageForEachExample() {
             expectToThrow(`Exception`)
         }
     }.run();
-    
+
     SpecResult[] errors = flatten(specResult);
-    assertEquals(errors[0], "ErrorCheck '``desc``' failed: expected ``platformIndependentName(`MutationException`)`` but threw ``Exception("Bad")`` [1, 2]");
-    assertEquals(errors[1], "ErrorCheck '``desc``' failed: expected ``platformIndependentName(`MutationException`)`` but threw ``Exception("Bad")`` [3, 4]");
-    assertEquals(errors[2], "ErrorCheck failed: no Exception thrown");
+    assertEquals(errors[0], "\nErrorCheck '``desc``' failed: expected ``platformIndependentName(`MutationException`)`` but threw ``Exception("Bad")`` [1, 2]");
+    assertEquals(errors[1], "\nErrorCheck '``desc``' failed: expected ``platformIndependentName(`MutationException`)`` but threw ``Exception("Bad")`` [3, 4]");
+    assertEquals(errors[2], "\nErrorCheck failed: no Exception thrown");
 }
 
 test shared void trivialForAllTestShouldSucceed() {
@@ -176,7 +175,7 @@ test shared void trivialForAllTestShouldSucceed() {
         forAll((String s) => expect(s.size, largerThan(-1))),
         forAll((String s, Integer i) => expect(s.size, largerThan(-1)))
     }.run();
-    
+
     assertEquals(specResult.size, 2);
     assert(exists firstResults = specResult.first);
     assertEquals(firstResults.sequence(), [success].cycled.take(100).sequence());
@@ -190,7 +189,7 @@ test shared void trivialPropertyChecksShouldSucceed() {
 			(String string) => [string.size],
 			{ (Integer len) => expect(len, largerThan(-1)) })
 	}.run();
-	
+
 	assertEquals(specResult.size, 1);
 	assert(exists firstResults = specResult.first);
 	assertEquals(firstResults.sequence(), [success].cycled.take(100).sequence());
@@ -218,7 +217,7 @@ test shared void limitedCountPropertyChecksShouldSucceed() {
             assertions = { (Integer len) => expect(len, largerThan(-1)) };
         }
     }.run();
-    
+
     assertEquals(specResult.size, 1);
     assert(exists firstResults = specResult.first);
     assertEquals(firstResults.sequence(), [success].cycled.take(testSamples).sequence());
@@ -236,7 +235,7 @@ test shared void manyArgumentsPropertyChecksShouldSucceed() {
               (String s, Integer i, String t)
                 => expectCondition(true) })
     }.run();
-    
+
     assertEquals(specResult.size, 1);
     assert(exists firstResults = specResult[0]);
     assertEquals(firstResults.sequence(), [success].cycled.take(300).sequence());
@@ -252,12 +251,12 @@ test shared void limitedCountBadPropertyChecksShouldFail() {
             assertions = { (Integer len) => expect(len, largerThan(100M)) };
         }
     }.run();
-    
+
     assertEquals(specResult.size, 1);
     assert(exists firstResults = specResult.first);
     assertTrue(firstResults.every((result) {
         assert(is String result);
-        value pass = result.startsWith("Feature 'test1' failed: ") &&
+        value pass = result.startsWith("\nFeature 'test1' failed: ") &&
                 result.contains(" is not larger than ");
         if (!pass) {
             print("FAILED: ``result``");

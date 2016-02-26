@@ -1,12 +1,12 @@
-import com.vasileff.ceylon.random.api {
+import ceylon.random {
     Random,
-    platformRandom
+    DefaultRandom
 }
 
-Random defaultRandom = platformRandom();
+Random defaultRandom = DefaultRandom();
 
 "Generates a range of integers within the given bounds.
- 
+
  The integers are not random and depend only on the values of count and the bounds.
  The generated values are appropriate for tests - an attempt is made
  to include boundary values and uniformly distribute the values."
@@ -25,14 +25,14 @@ shared {Integer+} rangeOfIntegers(
         throw Exception("Lower bound must not be larger than higher bound");
     }
     if (count == 1) { return { lowerBound < 0 < higherBound then 0 else lowerBound }; }
-    
+
     Integer step = (higherBound - lowerBound) / (count - 1);
-    
+
     class IntsIterator(Integer count) satisfies {Integer+} {
-        
+
         variable Integer itemsLeft = count;
         variable Integer current = lowerBound;
-        
+
         Integer|Finished increase() {
             if (itemsLeft == 0) {
                 return finished;
@@ -44,16 +44,16 @@ shared {Integer+} rangeOfIntegers(
             current += step;
             return result;
         }
-        
+
         size = count;
-        
+
         shared actual Iterator<Integer> iterator() => iter;
-        
+
         object iter satisfies Iterator<Integer> {
             shared actual Integer|Finished next() => increase();
         }
     }
-    
+
     return IntsIterator(count);
 }
 
@@ -69,14 +69,14 @@ shared {Integer+} randomIntegers(
 	Integer higherBound = 1M,
 	"Random instance to use for generating Integers"
 	Random random = defaultRandom) {
-	
+
 	if (count < 1) {
 		throw Exception("Count must be positive");
 	}
 	if (lowerBound > higherBound) {
 		throw Exception("Lower bound must not be larger than higher bound");
 	}
-	
+
 	return let (samples = count) object satisfies {Integer+} {
 		value result = { lowerBound + random.nextInteger(higherBound - lowerBound) }
 				.cycled.take(samples);
@@ -96,14 +96,14 @@ shared {Float+} randomFloats(
     Float higherBound = 1.0M,
     "Random instance to use for generating Floats"
     Random random = defaultRandom) {
-    
+
     if (count < 1) {
         throw Exception("Count must be positive");
     }
     if (lowerBound > higherBound) {
         throw Exception("Lower bound must not be larger than higher bound");
     }
-    
+
     return let (samples = count) object satisfies {Float+} {
         value totalRange = (higherBound - lowerBound).magnitude;
         value result = { lowerBound + (random.nextFloat() * totalRange ) }
@@ -119,11 +119,11 @@ shared {Boolean+} randomBooleans(
 	Integer count = 100,
 	"Random instance to use for generating Booleans"
 	Random random = defaultRandom) {
-	
+
 	if (count < 1) {
 		throw Exception("Count must be positive");
 	}
-	
+
 	return { random.nextBoolean() }.chain(
 		{ random.nextBoolean() }.cycled.take(count - 1));
 }
@@ -141,14 +141,14 @@ shared {String+} randomStrings(
     [Character+] allowedCharacters = '\{#20}'..'\{#7E}',
     "Random instance to use for generating Strings"
     Random random = defaultRandom) {
-    
+
     if (count < 1) {
         throw Exception("Count must be positive");
     }
     if (longest < shortest) {
         throw Exception("longest must not be smaller than shortest");
     }
-    
+
     String randomString() {
         Integer checkedShortest = max{ 0, shortest };
         Integer maxBound = longest - checkedShortest;
@@ -156,30 +156,30 @@ shared {String+} randomStrings(
         if (size == 0) { return ""; }
         return String(random.elements(allowedCharacters).take(size));
     }
-    
+
     if (count == 1) { return { randomString() }; }
-    
+
     class StringsIterator(Integer count) satisfies {String+} {
-        
+
         variable Integer itemsLeft = count;
-        
+
         String|Finished increase() {
             if (itemsLeft == 0) {
                 return finished;
             }
-            
+
             itemsLeft--;
             return randomString();
         }
-        
+
         size = count;
-        
+
         shared actual Iterator<String> iterator() => iter;
-        
+
         object iter satisfies Iterator<String> {
             shared actual String|Finished next() => increase();
         }
     }
-    
+
     return StringsIterator(count);
 }

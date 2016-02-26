@@ -5,13 +5,13 @@ import ceylon.language.meta.model {
     Type,
     Generic
 }
+import ceylon.random {
+    randomize
+}
 
 import com.athaydes.specks.assertion {
     AssertionResult,
     AssertionFailure
-}
-import com.vasileff.ceylon.random.api {
-    randomize
 }
 
 "The result of running a Specification which fails or causes an error.
@@ -39,12 +39,12 @@ interface Block {
 shared class Specification(
     "block which describe this [[Specification]]."
     {Block+} blocks) {
-    
+
     {SpecResult*} results(Block block) {
         print("Running block ``block.description``");
         return block.runTests();
     }
-    
+
     "Run this [[Specification]]. This method is called by **specks** to run this Specification
      and usually users do not need to call it directly."
     shared {SpecResult*}[] run() => blocks.collect(results);
@@ -66,7 +66,7 @@ SpecResult specResult(
         switch (result)
         case (is AssertionFailure) {
             String whereString = where.empty then "" else " ``where``";
-            return "``description`` failed: ``result````whereString``";
+            return "\n``description`` failed: ``result````whereString``";
         }
         case (is Null) {
             return success;
@@ -85,10 +85,10 @@ Block assertionsWithoutExamplesBlock<Result>(
     "Assertions to verify the result of running the 'when' function."
     {Callable<AssertionResult,Result>+} assertions)
         given Result satisfies Anything[] {
-    
+
     return object satisfies Block {
         description = internalDescription;
-        
+
         runTests() => assertSpecResultsExist(
             assertions.collect((assertion)
                 => specResult(apply(assertion), description, [])));
@@ -101,11 +101,11 @@ Block assertionsWithExamplesBlock<Where>(
     {Where*} examples,
     Integer maxFailuresAllowed)
         given Where satisfies Anything[] {
-    
-    
+
+
     SpecResult[] applyExamples(AssertionResult(Where) when) {
         variable Integer failures = 0;
-        
+
         SpecResult apply(Where example) {
             value result = specResult(() => when(example), internalDescription, example);
             if (result is SpecFailure) {
@@ -118,13 +118,13 @@ Block assertionsWithExamplesBlock<Where>(
             if (failures < maxFailuresAllowed) apply(example)
         ];
     }
-    
+
     return object satisfies Block {
         description = internalDescription;
-        
+
         runTests() => assertSpecResultsExist(
             assertions.flatMap(applyExamples).sequence());
-        
+
         string = "[``description`` - ``assertions.size``\
                    assertions, ``examples.size`` examples]";
     };
@@ -154,9 +154,9 @@ shared Block feature<out Where = [], in Result = Where>(
     Integer maxFailuresAllowed = 10)
         given Where satisfies Anything[]
         given Result satisfies Anything[] {
-    
+
     String internalDescription = blockDescription("Feature", description);
-    
+
     if (examples.empty) {
         "If you do not provide any examples, your 'when' function must not take any parameters."
         assert (is Callable<Result,[]> when);
@@ -184,7 +184,7 @@ shared Block errorCheck<Where = []>(
     "Maximum number of failures to allow before stopping running more tests."
     Integer maxFailuresAllowed = 10)
         given Where satisfies Anything[] {
-    
+
     AssertionResult() applyAssertion
     (Anything() when)
     (AssertionResult(Throwable?) assertion) {
@@ -195,14 +195,14 @@ shared Block errorCheck<Where = []>(
             return () => assertion(t);
         }
     }
-    
+
     AssertionResult applyAssertionToExample
     (AssertionResult(Throwable?) assertion)
     (Where example)
             => applyAssertion(() => when(*example))(assertion)();
-    
+
     String internalDescription = blockDescription("ErrorCheck", description);
-    
+
     if (examples.empty) {
         "If you do not provide any examples, your 'when' function must not take any parameters."
         assert (is Callable<Anything,[]> when);
@@ -212,13 +212,13 @@ shared Block errorCheck<Where = []>(
             assertions);
     } else {
         return assertionsWithExamplesBlock(
-            internalDescription, 
+            internalDescription,
             assertions.collect((assertion)
                 => applyAssertionToExample(assertion)),
             examples,
             maxFailuresAllowed);
     }
-    
+
 }
 
 shared Block forAll<Where>(
@@ -234,7 +234,7 @@ shared Block forAll<Where>(
     Integer maxFailuresAllowed = 10)
         given Where satisfies Anything[]
         => propertyCheck(flatten((Where where) => [assertion(*where)]),
-                { identity<AssertionResult> }, 
+                { identity<AssertionResult> },
                     description, sampleCount, generators, maxFailuresAllowed);
 
 [Anything()+] defaultGenerators() {
@@ -262,11 +262,11 @@ shared Block propertyCheck<Result, Where>(
         given Where satisfies Anything[]
         given Result satisfies Anything[]
         => let (desc = description) object satisfies Block {
-    
+
     description = desc;
-    
+
     Anything()? iterableToInstanceGeneratorFor(
-        Type<Anything> requiredType, 
+        Type<Anything> requiredType,
         Type<Anything> genReturnType,
         Anything() generator) {
         if (genReturnType.subtypeOf(`Iterable<>`)) {
@@ -274,7 +274,7 @@ shared Block propertyCheck<Result, Where>(
              elements type argument is the first one, such as [[List<Element>]]."
             assert(is Generic genReturnType);
             Type<Anything>? elementsType = genReturnType.typeArgumentList[0];
-            
+
             if (exists elementsType, elementsType.subtypeOf(requiredType)) {
                 assert(is {Anything*}() generator);
                 {{Anything*}+} infiniteGenerator = { generator() }.cycled;
@@ -283,9 +283,9 @@ shared Block propertyCheck<Result, Where>(
         }
         return null;
     }
-    
+
     value gens = generators else defaultGenerators();
-    
+
     Where exampleOf([Type<Anything>+] types) {
         {Anything()+} typeGenerators = types.map((requiredType) {
             [Anything()*] acceptableGenerators = gens.map((gen) {
@@ -297,7 +297,7 @@ shared Block propertyCheck<Result, Where>(
                 }
                 return null;
             }).coalesced.sequence();
-            
+
             if (acceptableGenerators.empty) {
                 throw Exception("No generator exists for type: ``requiredType``.
                                  Add a generator function for the required type.");
@@ -306,7 +306,7 @@ shared Block propertyCheck<Result, Where>(
             assert(exists result);
             return result;
         });
-        
+
         Tuple<Anything, Anything, Anything> typedTuple({Anything+} array) {
             if (exists second = array.rest.first) {
                 return Tuple(array.first,
@@ -316,24 +316,24 @@ shared Block propertyCheck<Result, Where>(
                 return Tuple(array.first, []);
             }
         }
-        
+
         [Anything+] instance = [ for (Anything() generate in typeGenerators) generate() ];
-        
+
         Tuple<Anything,Anything,Anything> tuple = typedTuple(instance);
-        
+
         "Tuple must be an instance of Where because Where was introspected to create it.
          If you ever see this error, please report a bug on GitHub!"
         assert(is Where tuple);
         return tuple;
     }
-    
+
     [Type<Anything>+] argTypes = TypeArgumentsChecker().argumentTypes(when);
-    
+
     {Where*} examples = (0:sampleCount).map((it)
         => exampleOf(argTypes));
-    
+
     shared actual {SpecResult*} runTests()
             => feature(when, assertions, description,
                 examples, maxFailuresAllowed).runTests();
-    
+
 };

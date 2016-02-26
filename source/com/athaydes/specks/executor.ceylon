@@ -4,12 +4,14 @@ import ceylon.language.meta.declaration {
     OpenClassOrInterfaceType
 }
 import ceylon.test {
-    TestExecutor,
-    testExecutor,
-    TestRunContext
+    testExecutor
 }
-import ceylon.test.core {
+import ceylon.test.engine {
     DefaultTestExecutor
+}
+import ceylon.test.engine.spi {
+    TestExecutor,
+    TestExecutionContext
 }
 
 """**specks** test executor. To run your [[Specification]]s using Ceylon's test framework, annotate your
@@ -40,12 +42,12 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
             assert(is Specification res = f.invoke());
             return res;
         }
-        
+
         value spec = f.toplevel then invokeTopFunction() else invokeMemberFunction();
         value result = spec.run();
         value allResults = [ for (specRun in result) for (specResult in specRun) specResult ];
         value failures = [ for (specResult in allResults) if (is SpecFailure specResult) specResult];
-        
+
         if (!failures.empty) {
             value errors = [ for (failure in failures) if (is Exception failure) failure ];
             if (!errors.empty) {
@@ -55,8 +57,8 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
             throw AssertionError(failures.string);
         }
     }
-    
-    shared actual void handleTestInvocation(TestRunContext context, Object? instance)() {
+
+    shared actual void handleTestInvocation(TestExecutionContext context, Object? instance, Anything[] args)() {
         invokeFunction(functionDeclaration, instance)();
     }
 
