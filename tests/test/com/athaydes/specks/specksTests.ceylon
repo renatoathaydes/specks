@@ -264,3 +264,22 @@ test shared void limitedCountBadPropertyChecksShouldFail() {
         return pass;
     }));
 }
+
+test shared void whenFunctionMustRunOnceForAllAssertions() {
+    variable Integer counter = 0;
+
+    function increment() => [counter++];
+
+    {SpecResult*}[] specResult = Specification {
+        feature {
+            when = increment;
+            (Integer count) => expect(count, equalTo(0)),
+            (Integer count) => expect(count, equalTo(0)),
+            (Integer count) => expect(count, equalTo(0)),
+            (Integer count) => expect(count, equalTo(0))
+        }
+    }.run();
+
+    assertEquals(flatten(specResult).map(asString).sequence(),
+        ["success", "success", "success", "success"]);
+}

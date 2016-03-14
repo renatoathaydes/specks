@@ -160,9 +160,10 @@ shared Block feature<out Where = [], in Result = Where>(
     if (examples.empty) {
         "If you do not provide any examples, your 'when' function must not take any parameters."
         assert (is Callable<Result,[]> when);
+        value whenResult = when();
         return assertionsWithoutExamplesBlock(internalDescription,
             (Callable<AssertionResult,Result> assertion)
-                    => () => assertion(*when()), assertions);
+                    => () => assertion(*whenResult), assertions);
     } else {
         return assertionsWithExamplesBlock(
             internalDescription,
