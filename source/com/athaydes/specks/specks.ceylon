@@ -5,6 +5,10 @@ import ceylon.language.meta.model {
     Type,
     Generic
 }
+import ceylon.logging {
+    logger,
+    Logger
+}
 import ceylon.random {
     randomize
 }
@@ -28,6 +32,8 @@ shared alias SpecResult => SpecFailure|SpecSuccess;
 "The result of running a Specification which is successful."
 shared SpecSuccess success = null;
 
+Logger log = logger(`module`);
+
 "Most generic kind of block which forms a [[Specification]]."
 shared
 interface Block {
@@ -41,7 +47,7 @@ shared class Specification(
     {Block+} blocks) {
 
     {SpecResult*} results(Block block) {
-        print("Running block ``block.description``");
+        log.info(() => "Running block ``block.description``");
         return block.runTests();
     }
 
@@ -91,6 +97,8 @@ FullSpecResult? specResult<Result>(
             case (is Exception) result
             else "\n``description`` failed: ``result````whereString``");
 
+        log.info(() => "Example failed: ``where`` - ``error``");
+
         return [results.withTrailing(error), failures + 1];
     }
 
@@ -102,7 +110,8 @@ FullSpecResult? specResult<Result>(
                   result = apply(() => assertion(*whenResult)))
             (switch (result)
                 case (is AssertionFailure|Exception) fail(acc, result)
-                else [acc[0].withTrailing(success), failures]))
+                else let (ignore = log.debug(() => "Assertion passed for example ``whenResult``"))
+                  [acc[0].withTrailing(success), failures]))
             .takeWhile((item) => item[1] <= maximumFailures)
             .last;
 }
@@ -294,6 +303,12 @@ shared Block propertyCheck<Result, Where>(
     }
 
     value gens = generators else defaultGenerators;
+
+    if (exists generators) {
+        log.debug("Using custom generator functions");
+    } else {
+        log.debug("Using default generator functions");
+    }
 
     Where exampleOf([Type<Anything>+] types) {
         {Anything()+} typeGenerators = types.map((requiredType) {
