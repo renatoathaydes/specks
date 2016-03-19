@@ -4,10 +4,16 @@ import ceylon.collection {
 import ceylon.language.meta.model {
     MutationException
 }
+import ceylon.logging {
+    addLogWriter,
+    Category,
+    Priority
+}
 import ceylon.test {
     test,
     assertEquals,
-    assertTrue
+    assertTrue,
+    beforeTest
 }
 
 import com.athaydes.specks {
@@ -35,6 +41,15 @@ import com.athaydes.specks.matcher {
 
 Boolean throwThis(Exception e) {
     throw e;
+}
+
+beforeTest
+shared void setupLogging() {
+    addLogWriter {
+        void log(Priority prio, Category category, String message, Throwable? error) {
+            //print("[``prio``] ``message``" + (if (exists error) then " - ``error``" else ""));
+        }
+    };
 }
 
 test shared void happySpecificationThatPassesAllTests() {
