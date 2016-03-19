@@ -1,3 +1,6 @@
+import ceylon.collection {
+    HashSet
+}
 import ceylon.language.meta.model {
     MutationException
 }
@@ -122,10 +125,10 @@ test shared void featuresShouldFailWithExplanationMessageForFailedExamples() {
 
     assertEquals(flatten(specResult).map(asString).sequence(), [
         "\nFeature 'desc' failed: a is not larger than b [a, b]",
-        "\nFeature 'desc' failed: c is not larger than d [c, d]",
         "\nFeature 'desc' failed: a is not equal to b [a, b]",
-        "\nFeature 'desc' failed: c is not equal to d [c, d]",
         "success",
+        "\nFeature 'desc' failed: c is not larger than d [c, d]",
+        "\nFeature 'desc' failed: c is not equal to d [c, d]",
         Exception().string
     ]);
 }
@@ -134,7 +137,7 @@ test shared void featuresShouldStopAfterFailingTooManyTimes() {
     {SpecResult*}[] specResult = Specification {
         feature {
             maxFailuresAllowed = 4;
-            examples = (1..100).map((i) => [i]);
+            examples = (1..100).collect((i) => [i]);
             when(Integer i) => if (i > 10) then ["FAIL"] else [success];
             (String? result) => result
         }
@@ -283,3 +286,43 @@ test shared void whenFunctionMustRunOnceForAllAssertions() {
     assertEquals(flatten(specResult).map(asString).sequence(),
         ["success", "success", "success", "success"]);
 }
+
+test shared void allAssertionsMustRunForEachExampleInTurn() {
+    {SpecResult*}[] specResult = Specification {
+        feature {
+            examples = [ [1], [2] ];
+            when = function(Integer n) => [n];
+            (Integer n) => expect(n, equalTo(n + 1)),
+            (Integer n) => expect(n, largerThan(n + 1))
+        }
+    }.run();
+
+    assertEquals(flatten(specResult).map(asString).sequence(),
+        ["\nFeature failed: 1 is not equal to 2 [1]",
+         "\nFeature failed: 1 is not larger than 2 [1]",
+         "\nFeature failed: 2 is not equal to 3 [2]",
+         "\nFeature failed: 2 is not larger than 3 [2]"]);
+}
+
+test shared void whenFunctionMustRunOnceForEachExampleForAllAssertions() {
+    value seenNumbers = HashSet<Integer>();
+
+    {SpecResult*}[] specResult = Specification {
+        feature {
+            examples = [ [1], [2] ];
+            when = function(Integer n) {
+                value newExample = seenNumbers.add(n);
+                value newN = newExample then n + 1 else n;
+                return [n, newN];
+            };
+            (Integer n, Integer newN) => expect(newN, equalTo(n + 1)),
+            (Integer n, Integer newN) => expect(newN, equalTo(n + 1)),
+            (Integer n, Integer newN) => expect(newN, equalTo(n + 1))
+        }
+    }.run();
+
+    assertEquals(flatten(specResult).map(asString).sequence(),
+        ["success", "success", "success",
+         "success", "success", "success"]);
+}
+

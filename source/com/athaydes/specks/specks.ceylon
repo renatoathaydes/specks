@@ -50,30 +50,61 @@ shared class Specification(
     shared {SpecResult*}[] run() => blocks.collect(results);
 }
 
-{SpecResult*} assertSpecResultsExist(SpecResult[] result) {
-    if (result.empty) {
-        throw Exception("Did not find any tests to run.");
+{SpecResult*} assertSpecResultsExist(SpecResult[]? result) {
+    if (exists result, !result.empty) {
+        return result;
     }
-    return result;
+    throw Exception("Did not find any tests to run.");
 }
 
-SpecResult specResult(
-    AssertionResult() applyAssertion,
-    String description,
-    Anything[] where) {
+alias FullSpecResult => [SpecResult[], Integer];
+
+Result|Exception apply<Result>(Result() fun) {
     try {
-        AssertionResult result = applyAssertion();
-        switch (result)
-        case (is AssertionFailure) {
-            String whereString = where.empty then "" else " ``where``";
-            return "\n``description`` failed: ``result````whereString``";
-        }
-        case (is Null) {
-            return success;
-        }
-    } catch (Throwable t) {
-        return Exception(t.message, t);
+        return fun();
+    } catch (e) {
+        return e;
     }
+}
+
+"Calculate the result of running the when function on an example for each assertion.
+ The [[previousResults]] parameter may be null, indicating that more than the alowed number of failures has
+ already occurred, which means no further assertions should be made."
+FullSpecResult? specResult<Result>(
+    Result() when,
+    {Callable<AssertionResult,Result>+} assertions,
+    String description,
+    {Anything*} where,
+    Integer maximumFailures,
+    FullSpecResult? previousResults = [[], 0])
+        given Result satisfies Anything[] {
+
+    if (is Null previousResults) {
+        return null;
+    }
+
+    FullSpecResult fail(FullSpecResult acc, AssertionFailure|Exception result) {
+        value whereString = where.empty then "" else " ``where``";
+        value [results, failures] = acc;
+
+        value error = (switch (result)
+            case (is Exception) result
+            else "\n``description`` failed: ``result````whereString``");
+
+        return [results.withTrailing(error), failures + 1];
+    }
+
+    value whenResult = apply(when);
+
+    return assertions.scan<FullSpecResult>(previousResults)((acc, assertion) =>
+        if (is Exception whenResult) then fail(acc, whenResult)
+        else let (failures = acc[1],
+                  result = apply(() => assertion(*whenResult)))
+            (switch (result)
+                case (is AssertionFailure|Exception) fail(acc, result)
+                else [acc[0].withTrailing(success), failures]))
+            .takeWhile((item) => item[1] <= maximumFailures)
+            .last;
 }
 
 String blockDescription(String blockName, String simpleDescription)
@@ -81,52 +112,43 @@ String blockDescription(String blockName, String simpleDescription)
 
 Block assertionsWithoutExamplesBlock<Result>(
     String internalDescription,
-    AssertionResult()(Callable<AssertionResult,Result>) apply,
+    Result() applyWhenFunction,
     "Assertions to verify the result of running the 'when' function."
-    {Callable<AssertionResult,Result>+} assertions)
+    {Callable<AssertionResult, Result>+} assertions,
+    Integer maxFailuresAllowed)
         given Result satisfies Anything[] {
 
     return object satisfies Block {
         description = internalDescription;
 
         runTests() => assertSpecResultsExist(
-            assertions.collect((assertion)
-                => specResult(apply(assertion), description, [])));
+            specResult(applyWhenFunction, assertions, description, [], maxFailuresAllowed)?.first);
     };
 }
 
-Block assertionsWithExamplesBlock<Where>(
+Block assertionsWithExamplesBlock<Where, Result>(
     String internalDescription,
-    AssertionResult(Where)[] assertions,
+    Result(Where) applyWhenFunction,
+    "Assertions to verify the result of running the 'when' function."
+    {Callable<AssertionResult,Result>+} assertions,
     {Where*} examples,
     Integer maxFailuresAllowed)
-        given Where satisfies Anything[] {
+        given Where satisfies Anything[]
+        given Result satisfies Anything[] {
 
-
-    SpecResult[] applyExamples(AssertionResult(Where) when) {
-        variable Integer failures = 0;
-
-        SpecResult apply(Where example) {
-            value result = specResult(() => when(example), internalDescription, example);
-            if (result is SpecFailure) {
-                failures++;
-            }
-            return result;
-        }
-
-        return [ for (example in examples)
-            if (failures < maxFailuresAllowed) apply(example)
-        ];
-    }
+    FullSpecResult? applyExample(FullSpecResult? previousResults, Where example) =>
+            specResult(
+                () => applyWhenFunction(example),
+                assertions, internalDescription, example,
+                maxFailuresAllowed, previousResults);
 
     return object satisfies Block {
         description = internalDescription;
 
         runTests() => assertSpecResultsExist(
-            assertions.flatMap(applyExamples).sequence());
+            examples.scan<FullSpecResult?>([[], 0])(applyExample).coalesced.last?.first else null);
 
-        string = "[``description`` - ``assertions.size``\
-                   assertions, ``examples.size`` examples]";
+        string = "[``description``]";
     };
 }
 
@@ -142,15 +164,15 @@ shared Block expectations(
 "A feature block allows the description of how a software functionality is expected to work."
 shared Block feature<out Where = [], in Result = Where>(
     "The action being tested in this feature."
-    Callable<Result,Where> when,
+    Callable<Result, Where> when,
     "Assertions to verify the result of running the 'when' function."
-    {Callable<AssertionResult,Result>+} assertions,
+    {Callable<AssertionResult, Result>+} assertions,
     "Description of this feature."
     String description = "",
     "Input examples.<p/>
      Each example will be passed to each assertion function in the order it is declared."
     {Where*} examples = [],
-    "Maximum number of failures to allow before stopping running more tests."
+    "Maximum number of failures to allow before stopping running more examples/assertions."
     Integer maxFailuresAllowed = 10)
         given Where satisfies Anything[]
         given Result satisfies Anything[] {
@@ -160,66 +182,52 @@ shared Block feature<out Where = [], in Result = Where>(
     if (examples.empty) {
         "If you do not provide any examples, your 'when' function must not take any parameters."
         assert (is Callable<Result,[]> when);
-        value whenResult = when();
-        return assertionsWithoutExamplesBlock(internalDescription,
-            (Callable<AssertionResult,Result> assertion)
-                    => () => assertion(*whenResult), assertions);
+        return assertionsWithoutExamplesBlock(
+            internalDescription, when, assertions, maxFailuresAllowed);
     } else {
         return assertionsWithExamplesBlock(
             internalDescription,
-            assertions.collect((assertion)
-                => (Where example) => assertion(*when(*example))),
-            examples,
-            maxFailuresAllowed);
+            (Where example) => when(*example),
+            assertions, examples, maxFailuresAllowed);
     }
 }
 
 shared Block errorCheck<Where = []>(
     "The action being tested in this feature."
-    Callable<Anything,Where> when,
+    Callable<Anything, Where> when,
     {AssertionResult(Throwable?)+} assertions,
     String description = "",
     "Input examples.<p/>
      Each example will be passed to each assertion function in the order it is declared."
     {Where*} examples = [],
-    "Maximum number of failures to allow before stopping running more tests."
+    "Maximum number of failures to allow before stopping running more examples/assertions."
     Integer maxFailuresAllowed = 10)
         given Where satisfies Anything[] {
 
-    AssertionResult() applyAssertion
-    (Anything() when)
-    (AssertionResult(Throwable?) assertion) {
+    [Throwable?] apply(void fun())() {
         try {
-            when();
-            return () => assertion(success);
+            fun();
+            return [success];
         } catch (Throwable t) {
-            return () => assertion(t);
+            return [t];
         }
     }
-
-    AssertionResult applyAssertionToExample
-    (AssertionResult(Throwable?) assertion)
-    (Where example)
-            => applyAssertion(() => when(*example))(assertion)();
 
     String internalDescription = blockDescription("ErrorCheck", description);
 
     if (examples.empty) {
         "If you do not provide any examples, your 'when' function must not take any parameters."
         assert (is Callable<Anything,[]> when);
+
         return assertionsWithoutExamplesBlock(
             internalDescription,
-            applyAssertion(when),
-            assertions);
+            apply(when), assertions, maxFailuresAllowed);
     } else {
         return assertionsWithExamplesBlock(
             internalDescription,
-            assertions.collect((assertion)
-                => applyAssertionToExample(assertion)),
-            examples,
-            maxFailuresAllowed);
+            (Where example) => apply(() => when(*example))(),
+            assertions, examples, maxFailuresAllowed);
     }
-
 }
 
 shared Block forAll<Where>(
@@ -231,14 +239,14 @@ shared Block forAll<Where>(
     Integer sampleCount = 100,
     "Input data generator functions. If not given, uses default generators."
     [Anything()+]? generators = null,
-	"Maximum number of failures to allow before stopping running more tests."
+    "Maximum number of failures to allow before stopping running more examples/assertions."
     Integer maxFailuresAllowed = 10)
         given Where satisfies Anything[]
         => propertyCheck(flatten((Where where) => [assertion(*where)]),
                 { identity<AssertionResult> },
                     description, sampleCount, generators, maxFailuresAllowed);
 
-[Anything()+] defaultGenerators() {
+[Anything()+] defaultGenerators {
 	function collectionSize() => 1 + defaultRandom.nextInteger(100);
 	value forStrings = () => randomStrings(collectionSize());
 	value forIntegers = () => randomIntegers(collectionSize());
@@ -258,7 +266,7 @@ shared Block propertyCheck<Result, Where>(
     Integer sampleCount = 100,
     "Input data generator functions. If not given, uses default generators."
     [Anything()+]? generators = null,
-    "Maximum number of failures to allow before stopping running more tests."
+    "Maximum number of failures to allow before stopping running more examples/assertions."
     Integer maxFailuresAllowed = 10)
         given Where satisfies Anything[]
         given Result satisfies Anything[]
@@ -285,7 +293,7 @@ shared Block propertyCheck<Result, Where>(
         return null;
     }
 
-    value gens = generators else defaultGenerators();
+    value gens = generators else defaultGenerators;
 
     Where exampleOf([Type<Anything>+] types) {
         {Anything()+} typeGenerators = types.map((requiredType) {
