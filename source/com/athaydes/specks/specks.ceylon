@@ -1,6 +1,9 @@
 import ceylon.language.meta {
     type
 }
+import ceylon.language.meta.declaration {
+    FunctionDeclaration
+}
 import ceylon.language.meta.model {
     Type,
     Generic
@@ -18,52 +21,88 @@ import com.athaydes.specks.assertion {
     AssertionFailure
 }
 
-"The result of running a Specification which fails or causes an error.
+"The result of running a Specification case which fails or causes an error.
  A String represents a failure and describes the reason for the failure.
- An Exception means an unexpected error which occurred when trying to run the Specification."
-shared alias SpecFailure => String|Exception;
+ An Exception means an unexpected error while running the Specification."
+shared alias SpecCaseFailure => String|Exception;
 
-"Successfull Specification"
-shared alias SpecSuccess => Null;
+"The result of running a successful Specification case"
+shared alias SpecCaseSuccess => Null;
+shared SpecCaseSuccess success = null;
 
-"The result of running a Specification."
-shared alias SpecResult => SpecFailure|SpecSuccess;
+"The result of running a Specification case.
+ A Specification case is defined as an assertion on the result given by a when function
+ (for each example, where applicable)."
+shared alias SpecCaseResult => SpecCaseFailure|SpecCaseSuccess;
 
-"The result of running a Specification which is successful."
-shared SpecSuccess success = null;
+"The result of running all cases of a [[Block]] of a [[Specification]]."
+shared alias BlockResult => {SpecCaseResult[]*};
+
+"Final result of running a [[Specification]]."
+shared alias SpecResult => BlockResult[];
+
+"Tuple aggregating a BlockResult (or intermediate result) with the number
+ of failures that have been observed so far."
+alias BlockResultAndFailures => [BlockResult, Integer];
+
+"Annotation class for [[unroll]]"
+shared final annotation class UnrollAnnotation()
+        satisfies OptionalAnnotation<UnrollAnnotation, FunctionDeclaration> {}
+
+"The unroll Annotation indicates that the results of a [[Specification]] should be split up into separate test results
+ for each Specification case (or a combination of assertion/example),
+ similar to ceylon.test [[ceylon.test::parameters]] annotated tests."
+shared annotation UnrollAnnotation unroll()
+        => UnrollAnnotation();
+
+"Most generic kind of block which forms a [[Specification]].
+
+ **specks** provides many different kinds of Blocks that can be created with functions
+ such as [[feature]], [[expectations]], [[errorCheck]] and, to enable *property-based* tests,
+ quickcheck style, [[forAll]], [[propertyCheck]]."
+shared
+interface Block {
+    "Description of this block"
+    shared formal String description;
+    "Returns a lazy Stream which can be used to collect the results of running this [[Block]]."
+    shared formal BlockResult runTests();
+}
 
 Logger log = logger(`module`);
 
-"Most generic kind of block which forms a [[Specification]]."
-shared
-interface Block {
-    shared formal String description;
-    shared formal {SpecResult*} runTests();
-}
-
 "Top-level representation of a Specification in **specks**."
 shared class Specification(
-    "block which describe this [[Specification]]."
+    "Blocks which are part of this [[Specification]]."
     {Block+} blocks) {
 
-    {SpecResult*} results(Block block) {
+    BlockResult results(Block block) {
         log.info(() => "Running block ``block.description``");
         return block.runTests();
     }
 
+    "Collects this [[Specification]]'s blocks as simple Runnables, without directly running any of them.
+     This allows external code to easily run blocks when required, collecting timing information for example."
+    shared {BlockResult()+} collectRunnables()
+            => blocks.map(Block.runTests);
+
     "Run this [[Specification]]. This method is called by **specks** to run this Specification
      and usually users do not need to call it directly."
-    shared {SpecResult*}[] run() => blocks.collect(results);
+    shared SpecResult run() => blocks.collect(results);
 }
 
-{SpecResult*} assertSpecResultsExist(SpecResult[]? result) {
-    if (exists result, !result.empty) {
-        return result;
-    }
-    throw Exception("Did not find any tests to run.");
-}
+BlockResultAndFailures startAssertions(BlockResultAndFailures current)
+        => [current[0].chain { [] }, current[1]];
 
-alias FullSpecResult => [SpecResult[], Integer];
+BlockResultAndFailures appendResult(BlockResultAndFailures current, SpecCaseResult result) {
+    value [results, failures] = current;
+
+    "currentAssertions' last item should've been appended by startAssertions()"
+    assert (exists currentAssertions = results.last);
+
+    SpecCaseResult[] newAssertions = currentAssertions.withTrailing(result);
+    value newFailures = if (result is SpecCaseFailure) then failures + 1 else failures;
+    return [results.exceptLast.chain { newAssertions }, newFailures];
+}
 
 Result|Exception apply<Result>(Result() fun) {
     try {
@@ -73,23 +112,23 @@ Result|Exception apply<Result>(Result() fun) {
     }
 }
 
-"Calculate the result of running the when function on an example for each assertion.
- The [[previousResults]] parameter may be null, indicating that more than the alowed number of failures has
- already occurred, which means no further assertions should be made."
-FullSpecResult? specResult<Result>(
+"Calculate the result of running the when function on a single example for each assertion."
+BlockResultAndFailures applyAssertions<Result>(
     Result() when,
     {Callable<AssertionResult,Result>+} assertions,
     String description,
     {Anything*} where,
     Integer maximumFailures,
-    FullSpecResult? previousResults = [[], 0])
+    BlockResultAndFailures previousResults = [[], 0])
         given Result satisfies Anything[] {
 
-    if (is Null previousResults) {
-        return null;
+    value currentFailures = previousResults[1];
+
+    if (currentFailures >= maximumFailures) {
+        return previousResults;
     }
 
-    FullSpecResult fail(FullSpecResult acc, AssertionFailure|Exception result) {
+    BlockResultAndFailures fail(BlockResultAndFailures acc, AssertionFailure|Exception result) {
         value whereString = where.empty then "" else " ``where``";
         value [results, failures] = acc;
 
@@ -97,23 +136,28 @@ FullSpecResult? specResult<Result>(
             case (is Exception) result
             else "\n``description`` failed: ``result````whereString``");
 
-        log.info(() => "Example failed: ``where`` - ``error``");
+        log.info(() => "Example '``where``' failed with error: ``error``");
 
-        return [results.withTrailing(error), failures + 1];
+        return appendResult(acc, error);
+    }
+
+    BlockResultAndFailures pass(BlockResultAndFailures fullSpecResult, Result whenResult) {
+        log.debug(() => "Assertion passed for example ``whenResult``");
+        return appendResult(fullSpecResult, success);
     }
 
     value whenResult = apply(when);
 
-    return assertions.scan<FullSpecResult>(previousResults)((acc, assertion) =>
+    value result = assertions.scan<BlockResultAndFailures>(startAssertions(previousResults))((acc, assertion) =>
         if (is Exception whenResult) then fail(acc, whenResult)
         else let (failures = acc[1],
                   result = apply(() => assertion(*whenResult)))
             (switch (result)
                 case (is AssertionFailure|Exception) fail(acc, result)
-                else let (ignore = log.debug(() => "Assertion passed for example ``whenResult``"))
-                  [acc[0].withTrailing(success), failures]))
-            .takeWhile((item) => item[1] <= maximumFailures)
-            .last;
+                else pass(acc, whenResult)))
+            .takeWhile((item) => item[1] <= maximumFailures).last;
+
+    return result else previousResults;
 }
 
 String blockDescription(String blockName, String simpleDescription)
@@ -130,8 +174,7 @@ Block assertionsWithoutExamplesBlock<Result>(
     return object satisfies Block {
         description = internalDescription;
 
-        runTests() => assertSpecResultsExist(
-            specResult(applyWhenFunction, assertions, description, [], maxFailuresAllowed)?.first);
+        runTests() => applyAssertions(applyWhenFunction, assertions, description, [], maxFailuresAllowed).first;
     };
 }
 
@@ -145,17 +188,18 @@ Block assertionsWithExamplesBlock<Where, Result>(
         given Where satisfies Anything[]
         given Result satisfies Anything[] {
 
-    FullSpecResult? applyExample(FullSpecResult? previousResults, Where example) =>
-            specResult(
+    BlockResultAndFailures applyExample(BlockResultAndFailures previousResults, Where example) {
+        log.debug(() => "Assessing example ``example``");
+        return applyAssertions(
                 () => applyWhenFunction(example),
                 assertions, internalDescription, example,
                 maxFailuresAllowed, previousResults);
+    }
 
     return object satisfies Block {
         description = internalDescription;
 
-        runTests() => assertSpecResultsExist(
-            examples.scan<FullSpecResult?>([[], 0])(applyExample).coalesced.last?.first else null);
+        runTests() => examples.scan<BlockResultAndFailures>([[], 0])(applyExample).last.first ;
 
         string = "[``description``]";
     };
@@ -356,7 +400,7 @@ shared Block propertyCheck<Result, Where>(
     {Where*} examples = (0:sampleCount).map((it)
         => exampleOf(argTypes));
 
-    shared actual {SpecResult*} runTests()
+    shared actual BlockResult runTests()
             => feature(when, assertions, description,
                 examples, maxFailuresAllowed).runTests();
 
