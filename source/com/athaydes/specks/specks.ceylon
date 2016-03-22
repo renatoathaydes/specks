@@ -26,14 +26,14 @@ import com.athaydes.specks.assertion {
  An Exception means an unexpected error while running the Specification."
 shared alias SpecCaseFailure => String|Exception;
 
-"The result of running a successful Specification case"
-shared alias SpecCaseSuccess => Null;
-shared SpecCaseSuccess success = null;
+"The result of running a successful Specification case or a successful assertion"
+shared alias Success => Null;
+shared Success success = null;
 
 "The result of running a Specification case.
  A Specification case is defined as an assertion on the result given by a when function
  (for each example, where applicable)."
-shared alias SpecCaseResult => SpecCaseFailure|SpecCaseSuccess;
+shared alias SpecCaseResult => SpecCaseFailure|Success;
 
 "The result of running all cases of a [[Block]] of a [[Specification]]."
 shared alias BlockResult => {SpecCaseResult[]*};

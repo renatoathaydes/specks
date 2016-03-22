@@ -5,26 +5,27 @@ import ceylon.language.meta.model {
     Type
 }
 
+import com.athaydes.specks {
+    success,
+    Success
+}
 import com.athaydes.specks.matcher {
     identicalTo,
     toBe,
     Matcher
 }
-import com.athaydes.specks {
-    success
-}
 
 "The result of making an assertion."
-shared alias AssertionResult => AssertionFailure?;
+shared alias AssertionResult => AssertionFailure | Success;
 
 "The result of a failed assertion"
 shared alias AssertionFailure => String;
 
 "Express an expectation that the actual value should match some condition
  according to the given matcher.
- 
+
  For example, if you expect a value to be null:
- 
+
  <code>
  expect(actual, toBe(equalTo(5)));
  expect(actual, to(exist));
@@ -33,9 +34,9 @@ shared AssertionResult expect<Element>(Element actual, Matcher<Element> matcher)
         => matcher.matches(actual);
 
 "Expect that a condition evaluates to true.
- 
+
  This is a shortcut for:
- 
+
  <code>
      expect(expectedToBeTrue, toBe(identicalTo(true)));
  </code>"
