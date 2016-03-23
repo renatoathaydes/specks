@@ -11,7 +11,8 @@ import ceylon.test {
 }
 import ceylon.test.engine {
     DefaultTestExecutor,
-    TestSkippedException
+    TestSkippedException,
+    TestAbortedException
 }
 import ceylon.test.engine.spi {
     TestExecutor,
@@ -71,44 +72,73 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
         context.registerExtension(groupTestListener);
         context.fire().testStarted(TestStartedEvent(description));
 
-        for (index -> testRunnable in runnableTests.indexed) {
+        for (index -> block in runnableTests.indexed) {
             value variant = context.extension<TestVariantProvider>().variant(description, index, [index]);
             value variantDescription = description.forVariant(variant, index);
-            print("Variant description: ``variantDescription``");
             value contextForVariant = context.childContext(variantDescription);
-            executeTest(contextForVariant, instance, () => handleResults(testRunnable()));
+
+            value exampleResultsIterator = block().iterator();
+
+            // execute the next example until no more examples are left
+            while (!executeTest(contextForVariant, instance, exampleResultsIterator)) {}
         }
 
         context.fire().testFinished(TestFinishedEvent(
             TestResult(description, groupTestListener.worstState, true, null, groupTestListener.elapsedTime)));
     }
 
-    void handleResults({SpecCaseResult*} results) {
-        value r = results.sequence();
-        value failures = [ for (specResult in r) if (is SpecCaseFailure specResult) specResult];
-        print("Handling results: ``r``");
+    Boolean handleExecution(TestExecutionContext context, Object? instance, Iterator<SpecCaseResult[]> exampleGetter) {
+        value startTime = system.milliseconds;
+        function elapsedTime() => system.milliseconds - startTime;
 
-        if (!failures.empty) {
-            value errors = [ for (failure in failures) if (is Exception failure) failure ];
-            if (!errors.empty) {
-                for (e in errors) {
-                    e.printStackTrace();
-                }
-                throw Exception(failures.string);
+        try {
+            value assertionResults = exampleGetter.next();
+
+            if (is Finished assertionResults) {
+                return true; // done
             }
-            throw AssertionError(failures.string);
+
+            context.fire().testStarted(TestStartedEvent(context.description, instance));
+
+            value errors = [for (res in assertionResults) if (is Exception res) res];
+            value failures = [for (res in assertionResults) if (is String res) res];
+
+            if (nonempty errors) {
+                for (error in errors) {
+                    error.printStackTrace();
+                }
+                context.fire().testFinished(TestFinishedEvent(
+                    TestResult(context.description, TestState.error, false, errors.first, elapsedTime()), instance));
+            } else if (nonempty failures) {
+                context.fire().testFinished(TestFinishedEvent(
+                    TestResult(context.description, TestState.failure, false, AssertionError(failures.string), elapsedTime()), instance));
+            } else {
+                context.fire().testFinished(TestFinishedEvent(
+                    TestResult(context.description, TestState.success, false, null, elapsedTime()), instance));
+            }
+
+            return false;
         }
+        catch (TestSkippedException e) {
+            context.fire().testSkipped(TestSkippedEvent(TestResult(context.description, TestState.skipped, false, e)));
+        }
+        catch (TestAbortedException e) {
+            context.fire().testAborted(TestAbortedEvent(TestResult(context.description, TestState.aborted, false, e)));
+        }
+
+        return true;
     }
 
-    void executeTest(TestExecutionContext context, Object? instance, void execute()) {
+    Boolean executeTest(TestExecutionContext context, Object? instance, Iterator<SpecCaseResult[]> exampleGetter) {
         print("Test: ``context.description``");
         print("Before");
         handleBeforeCallbacks(context, instance, () {})();
         print("Test run");
-        handleTestExecution(context, instance, execute)();
+        value done = handleExecution(context, instance, exampleGetter);
         print("After");
         handleAfterCallbacks(context, instance, () {})();
         print("Done");
+        return done;
     }
 
     shared actual void execute(TestExecutionContext parent) {
@@ -122,11 +152,12 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
             value spec = getSpec(instance, context);
 
             if (unroll) {
-                print("Running unrolled specification");
+                log.debug("Running unrolled specification");
                 runUnrolledSpec(context, instance, spec);
             } else {
-                print("Running simple specification");
-                executeTest(context, instance, () => handleResults(spec.run().flatMap(identity).sequence()));
+                log.debug("Running simple specification");
+                value examplesIterator = spec.collectRunnables().flatMap((run) => run()).iterator();
+                executeTest(context, instance, examplesIterator);
             }
         }
         catch (TestSkippedException e) {
