@@ -370,7 +370,7 @@ test shared void allAssertionsMustRunForEachExampleInTurn() {
     }.collectRunnables();
 
     assertEquals(specResult.size, 1);
-    value firstResult = specResult.first().sequence();
+    value firstResult = specResult.first.sequence();
 
     value firstExampleResults = firstResult[0];
     assertEquals(firstExampleResults, [

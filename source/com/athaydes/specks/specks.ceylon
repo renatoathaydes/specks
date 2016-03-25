@@ -82,8 +82,8 @@ shared class Specification(
 
     "Collects this [[Specification]]'s blocks as simple Runnables, without directly running any of them.
      This allows external code to easily run blocks when required, collecting timing information for example."
-    shared {BlockResult()+} collectRunnables()
-            => blocks.map(Block.runTests);
+    shared {BlockResult+} collectRunnables()
+            => blocks.map((block) => block.runTests());
 
     "Run this [[Specification]]. This method is called by **specks** to run this Specification
      and usually users do not need to call it directly."

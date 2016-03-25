@@ -66,21 +66,31 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
     }
 
     void runUnrolledSpec(TestExecutionContext context, Object? instance, Specification spec) {
+        print("Requesting runnables");
         value runnableTests = spec.collectRunnables();
-
+        print("Got runnables");
         value groupTestListener = GroupTestListener();
         context.registerExtension(groupTestListener);
         context.fire().testStarted(TestStartedEvent(description));
 
-        for (index -> block in runnableTests.indexed) {
+        function contextFor(Integer index) {
             value variant = context.extension<TestVariantProvider>().variant(description, index, [index]);
             value variantDescription = description.forVariant(variant, index);
-            value contextForVariant = context.childContext(variantDescription);
+            return context.childContext(variantDescription);
+        }
 
-            value exampleResultsIterator = block().iterator();
+        variable Integer index = 1;
+
+        for (block in runnableTests) {
+            print("Looking at block ``block``");
+
+            value exampleResultsIterator = block.iterator();
+            print("Got iterator, executing assertions");
 
             // execute the next example until no more examples are left
-            while (!executeTest(contextForVariant, instance, exampleResultsIterator)) {}
+            while (!executeTest(contextFor(index), instance, exampleResultsIterator)) {
+                index++;
+            }
         }
 
         context.fire().testFinished(TestFinishedEvent(
@@ -156,7 +166,7 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
                 runUnrolledSpec(context, instance, spec);
             } else {
                 log.debug("Running simple specification");
-                value examplesIterator = spec.collectRunnables().flatMap((run) => run()).iterator();
+                value examplesIterator = spec.collectRunnables().flatMap(identity).iterator();
                 executeTest(context, instance, examplesIterator);
             }
         }
