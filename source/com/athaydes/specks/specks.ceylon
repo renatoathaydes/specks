@@ -17,8 +17,7 @@ import ceylon.random {
 }
 
 import com.athaydes.specks.assertion {
-    AssertionResult,
-    AssertionFailure
+    AssertionResult
 }
 
 "The result of running a Specification case which fails or causes an error.
@@ -35,15 +34,13 @@ shared Success success = null;
  (for each example, where applicable)."
 shared alias SpecCaseResult => SpecCaseFailure|Success;
 
-"The result of running all cases of a [[Block]] of a [[Specification]]."
-shared alias BlockResult => {SpecCaseResult[]*};
+"The result of running all cases of a [[Block]] of a [[Specification]].
+ The key in each entry of the stream represents an example in the block, whereas the value represents
+ the lazily-obtained result of all assertions on that example."
+shared alias BlockResult => {<Anything[] -> {SpecCaseResult*}()>*};
 
 "Final result of running a [[Specification]]."
 shared alias SpecResult => BlockResult[];
-
-"Tuple aggregating a BlockResult (or intermediate result) with the number
- of failures that have been observed so far."
-alias BlockResultAndFailures => [BlockResult, Integer];
 
 "Annotation class for [[unroll]]"
 shared final annotation class UnrollAnnotation()
@@ -54,6 +51,17 @@ shared final annotation class UnrollAnnotation()
  similar to ceylon.test [[ceylon.test::parameters]] annotated tests."
 shared annotation UnrollAnnotation unroll()
         => UnrollAnnotation();
+
+class Counter() {
+    variable Integer count = 0;
+
+    shared Integer currentValue() => count;
+
+    shared void increment() {
+        log.trace(() => "Incrementing counter from ``count``");
+        count++;
+    }
+}
 
 "Most generic kind of block which forms a [[Specification]].
 
@@ -80,28 +88,10 @@ shared class Specification(
         return block.runTests();
     }
 
-    "Collects this [[Specification]]'s blocks as simple Runnables, without directly running any of them.
-     This allows external code to easily run blocks when required, collecting timing information for example."
-    shared {BlockResult+} collectRunnables()
-            => blocks.map((block) => block.runTests());
+    "Run this [[Specification]].
 
-    "Run this [[Specification]]. This method is called by **specks** to run this Specification
-     and usually users do not need to call it directly."
+     This method is called by **specks** and usually users do not need to call it directly."
     shared SpecResult run() => blocks.collect(results);
-}
-
-BlockResultAndFailures startAssertions(BlockResultAndFailures current)
-        => [current[0].chain { [] }, current[1]];
-
-BlockResultAndFailures appendResult(BlockResultAndFailures current, SpecCaseResult result) {
-    value [results, failures] = current;
-
-    "currentAssertions' last item should've been appended by startAssertions()"
-    assert (exists currentAssertions = results.last);
-
-    SpecCaseResult[] newAssertions = currentAssertions.withTrailing(result);
-    value newFailures = if (result is SpecCaseFailure) then failures + 1 else failures;
-    return [results.exceptLast.chain { newAssertions }, newFailures];
 }
 
 Result|Exception apply<Result>(Result() fun) {
@@ -113,51 +103,50 @@ Result|Exception apply<Result>(Result() fun) {
 }
 
 "Calculate the result of running the when function on a single example for each assertion."
-BlockResultAndFailures applyAssertions<Result>(
+{SpecCaseResult*} applyAssertions<Result>(
     Result() when,
     {Callable<AssertionResult,Result>+} assertions,
     String description,
-    {Anything*} where,
+    Anything[] where,
     Integer maximumFailures,
-    BlockResultAndFailures previousResults = [[], 0])
+    Counter failures = Counter())()
         given Result satisfies Anything[] {
-
-    value currentFailures = previousResults[1];
-
-    if (currentFailures >= maximumFailures) {
-        return previousResults;
-    }
-
-    BlockResultAndFailures fail(BlockResultAndFailures acc, AssertionFailure|Exception result) {
-        value whereString = where.empty then "" else " ``where``";
-        value [results, failures] = acc;
-
-        value error = (switch (result)
-            case (is Exception) result
-            else "\n``description`` failed: ``result````whereString``");
-
-        log.info(() => "Example '``where``' failed with error: ``error``");
-
-        return appendResult(acc, error);
-    }
-
-    BlockResultAndFailures pass(BlockResultAndFailures fullSpecResult, Result whenResult) {
-        log.debug(() => "Assertion passed for example ``whenResult``");
-        return appendResult(fullSpecResult, success);
-    }
-
+    log.debug(() => "Assessing example ``where``");
     value whenResult = apply(when);
 
-    value result = assertions.scan<BlockResultAndFailures>(startAssertions(previousResults))((acc, assertion) =>
-        if (is Exception whenResult) then fail(acc, whenResult)
-        else let (failures = acc[1],
-                  result = apply(() => assertion(*whenResult)))
-            (switch (result)
-                case (is AssertionFailure|Exception) fail(acc, result)
-                else pass(acc, whenResult)))
-            .takeWhile((item) => item[1] <= maximumFailures).last;
+    if (is Exception whenResult) {
+        return [ whenResult ];
+    }
 
-    return result else previousResults;
+    return object satisfies {SpecCaseResult*} {
+
+        value assertionsIterator = assertions.iterator();
+
+        iterator() => object satisfies Iterator<SpecCaseResult> {
+            shared actual SpecCaseResult|Finished next() {
+                if (failures.currentValue() >= maximumFailures) {
+                    return finished;
+                } else if (!is Finished assertion = assertionsIterator.next()) {
+                    value result = apply(() => assertion(*whenResult));
+                    if (!is Success result) {
+                        log.info(() => "Example '``where``' failed: ``result``");
+                        failures.increment();
+                        value whereString = where.empty then "" else " ``where``";
+                        if (is Exception result) {
+                            return result;
+                        } else {
+                            return "\n``description`` failed: ``result````whereString``";
+                        }
+                    } else {
+                        log.debug(() => "Assertion passed for example '``where``'");
+                        return success;
+                    }
+                } else {
+                    return finished;
+                }
+            }
+        };
+    };
 }
 
 String blockDescription(String blockName, String simpleDescription)
@@ -174,7 +163,7 @@ Block assertionsWithoutExamplesBlock<Result>(
     return object satisfies Block {
         description = internalDescription;
 
-        runTests() => applyAssertions(applyWhenFunction, assertions, description, [], maxFailuresAllowed).first;
+        runTests() => { [] -> applyAssertions(applyWhenFunction, assertions, description, [], maxFailuresAllowed) };
     };
 }
 
@@ -188,18 +177,23 @@ Block assertionsWithExamplesBlock<Where, Result>(
         given Where satisfies Anything[]
         given Result satisfies Anything[] {
 
-    BlockResultAndFailures applyExample(BlockResultAndFailures previousResults, Where example) {
-        log.debug(() => "Assessing example ``example``");
-        return applyAssertions(
-                () => applyWhenFunction(example),
-                assertions, internalDescription, example,
-                maxFailuresAllowed, previousResults);
+    Where->{SpecCaseResult*}() applyExample(Counter failures)(Where example) {
+        if (failures.currentValue() >= maxFailuresAllowed) {
+            return example -> (() => {});
+        }
+        value assertionResults = applyAssertions(
+            () => applyWhenFunction(example),
+            assertions, internalDescription, example,
+            maxFailuresAllowed,
+            failures);
+
+         return example -> assertionResults;
     }
 
     return object satisfies Block {
         description = internalDescription;
 
-        runTests() => examples.scan<BlockResultAndFailures>([[], 0])(applyExample).last.first ;
+        runTests() => examples.map(applyExample(Counter()));
 
         string = "[``description``]";
     };

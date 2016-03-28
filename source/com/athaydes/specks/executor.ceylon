@@ -66,30 +66,21 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
     }
 
     void runUnrolledSpec(TestExecutionContext context, Object? instance, Specification spec) {
-        print("Requesting runnables");
-        value runnableTests = spec.collectRunnables();
-        print("Got runnables");
+        value specResult = spec.run();
         value groupTestListener = GroupTestListener();
         context.registerExtension(groupTestListener);
         context.fire().testStarted(TestStartedEvent(description));
 
-        function contextFor(Integer index) {
-            value variant = context.extension<TestVariantProvider>().variant(description, index, [index]);
+        function contextFor(Integer index, Anything[] example) {
+            value variant = context.extension<TestVariantProvider>().variant(description, index, example);
             value variantDescription = description.forVariant(variant, index);
             return context.childContext(variantDescription);
         }
 
-        variable Integer index = 1;
-
-        for (block in runnableTests) {
-            print("Looking at block ``block``");
-
-            value exampleResultsIterator = block.iterator();
-            print("Got iterator, executing assertions");
-
-            // execute the next example until no more examples are left
-            while (!executeTest(contextFor(index), instance, exampleResultsIterator)) {
-                index++;
+        for (index -> blockResult in specResult.indexed) {
+            for (subIndex -> exampleAssertions in blockResult.indexed) {
+                value [example, assertionResults] = exampleAssertions.pair;
+                executeTest(contextFor(index + subIndex + 1, example), instance, assertionResults);
             }
         }
 
@@ -97,58 +88,56 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
             TestResult(description, groupTestListener.worstState, true, null, groupTestListener.elapsedTime)));
     }
 
-    Boolean handleExecution(TestExecutionContext context, Object? instance, Iterator<SpecCaseResult[]> exampleGetter) {
+    void handleExecution(TestExecutionContext context, Object? instance, {SpecCaseResult*}() resultsGetter) {
         value startTime = system.milliseconds;
         function elapsedTime() => system.milliseconds - startTime;
 
         try {
-            value assertionResults = exampleGetter.next();
-
-            if (is Finished assertionResults) {
-                return true; // done
-            }
-
             context.fire().testStarted(TestStartedEvent(context.description, instance));
 
-            value errors = [for (res in assertionResults) if (is Exception res) res];
-            value failures = [for (res in assertionResults) if (is String res) res];
+            log.trace("Evaluating Specification case");
+            value results = resultsGetter().sequence();
+            value errors = [for (res in results) if (is Exception res) res];
+            value failures = [for (res in results) if (is String res) res];
+
+            log.info("Results: ``results``");
 
             if (nonempty errors) {
+                log.warn(() => "Specification had ``errors.size`` error(s)");
                 for (error in errors) {
                     error.printStackTrace();
                 }
                 context.fire().testFinished(TestFinishedEvent(
                     TestResult(context.description, TestState.error, false, errors.first, elapsedTime()), instance));
             } else if (nonempty failures) {
+                log.info(() => "Specification had ``failures.size`` failure(s)");
                 context.fire().testFinished(TestFinishedEvent(
                     TestResult(context.description, TestState.failure, false, AssertionError(failures.string), elapsedTime()), instance));
             } else {
+                log.trace("Specification case ran without problems");
                 context.fire().testFinished(TestFinishedEvent(
                     TestResult(context.description, TestState.success, false, null, elapsedTime()), instance));
             }
-
-            return false;
         }
         catch (TestSkippedException e) {
-            context.fire().testSkipped(TestSkippedEvent(TestResult(context.description, TestState.skipped, false, e)));
+            log.info("Specification was skipped");
+            context.fire().testSkipped(TestSkippedEvent(
+                TestResult(context.description, TestState.skipped, false, e)));
         }
         catch (TestAbortedException e) {
-            context.fire().testAborted(TestAbortedEvent(TestResult(context.description, TestState.aborted, false, e)));
+            log.info("Aborted Specification");
+            context.fire().testAborted(TestAbortedEvent(
+                TestResult(context.description, TestState.aborted, false, e)));
         }
-
-        return true;
     }
 
-    Boolean executeTest(TestExecutionContext context, Object? instance, Iterator<SpecCaseResult[]> exampleGetter) {
-        print("Test: ``context.description``");
-        print("Before");
+    void executeTest(TestExecutionContext context, Object? instance,
+                        {SpecCaseResult*}() resultsGetter) {
+        log.trace("Running beforeTest functions");
         handleBeforeCallbacks(context, instance, () {})();
-        print("Test run");
-        value done = handleExecution(context, instance, exampleGetter);
-        print("After");
+        handleExecution(context, instance, resultsGetter);
+        log.trace("Running afterTest functions");
         handleAfterCallbacks(context, instance, () {})();
-        print("Done");
-        return done;
     }
 
     shared actual void execute(TestExecutionContext parent) {
@@ -166,8 +155,12 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
                 runUnrolledSpec(context, instance, spec);
             } else {
                 log.debug("Running simple specification");
-                value examplesIterator = spec.collectRunnables().flatMap(identity).iterator();
-                executeTest(context, instance, examplesIterator);
+                value blocksResults = spec.run();
+                for (index -> blockResult in blocksResults.indexed) {
+                    for (example -> assertionResults in blockResult) {
+                        executeTest(context, instance, assertionResults);
+                    }
+                }
             }
         }
         catch (TestSkippedException e) {

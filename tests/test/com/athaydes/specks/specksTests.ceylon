@@ -7,7 +7,9 @@ import ceylon.language.meta.model {
 import ceylon.logging {
     addLogWriter,
     Category,
-    Priority
+    Priority,
+    logger,
+    warn
 }
 import ceylon.test {
     test,
@@ -21,10 +23,9 @@ import com.athaydes.specks {
     success,
     feature,
     errorCheck,
-    Success,
     forAll,
     propertyCheck,
-    BlockResult
+    SpecResult
 }
 import com.athaydes.specks.assertion {
     expect,
@@ -38,20 +39,30 @@ import com.athaydes.specks.matcher {
 }
 
 
-[SpecCaseResult*] flatten({SpecCaseResult*}[] specResult) =>
-        [ for ({SpecCaseResult*} res in specResult) for (SpecCaseResult row in res) row ];
-
 Boolean throwThis(Exception e) {
     throw e;
 }
 
+<Anything[]-><SpecCaseResult>[]>[] specResultAt(SpecResult specResult)(Integer index) =>
+        if (exists results = specResult[index]?.sequence()) then
+            results.collect((entry) => entry.key -> entry.item().sequence())
+        else [];
+
+
+variable Boolean addedLog = false;
 beforeTest
 shared void setupLogging() {
+    if (addedLog) {
+        return;
+    }
+    addedLog = true;
+    value start = system.milliseconds;
     addLogWriter {
         void log(Priority prio, Category category, String message, Throwable? error) {
-            print("[``prio``] ``message``" + (if (exists error) then " - ``error``" else ""));
+            print("``system.milliseconds - start``: [``prio``] ``message``" + (if (exists error) then " - ``error``" else ""));
         }
     };
+    logger(`module com.athaydes.specks`).priority = warn; // trace;
 }
 
 test shared void happySpecificationThatPassesAllTests() {
@@ -88,31 +99,24 @@ test shared void happySpecificationThatPassesAllTests() {
         }
     }.run();
 
+    value specResultAtIndex = specResultAt(specResult);
+
     assertEquals(specResult.size, 4); // number of blocks
 
-    assert(exists firstBlockResult = specResult[0]?.sequence());
-    assertEquals(firstBlockResult, [
-        [success, success], // first example
-        [success, success], // second example
-        [success, success]  // third example
-    ]);
+    assertEquals(specResultAtIndex(0), [
+        [2, 4, 6] -> [success, success],
+        [0, 0, 0] -> [success, success],
+        [-1, 0, -1] -> [success, success]]);
 
-    assert(exists secondBlockResult = specResult[1]?.sequence());
-    assertEquals(secondBlockResult, [
-        [success, success, success, success]
-    ]);
+    assertEquals(specResultAtIndex(1), [[] -> [success, success, success, success]]);
 
-    assert(exists thirdBlockResult = specResult[2]?.sequence());
-    assertEquals(thirdBlockResult, [
-        [success, success], // first example
-        [success, success]  // second example
-    ]);
+    assertEquals(specResultAtIndex(2), [
+        [true, false] -> [success, success],
+        [false, true] -> [success, success]]);
 
-    assert(exists fourthBlockResult = specResult[3]?.sequence());
-    assertEquals(fourthBlockResult, [
-        [success], // first example
-        [success]  // second example
-    ]);
+    assertEquals(specResultAtIndex(3), [
+        [1] -> [success],
+        [2] -> [success]]);
 }
 
 test shared void featuresShouldFailWithExplanationMessage() {
@@ -133,19 +137,25 @@ test shared void featuresShouldFailWithExplanationMessage() {
         }
     }.run();
 
+    value specResultAtIndex = specResultAt(specResult);
+
     assertEquals(specResult.size, 1);
 
-    assert(exists firstResult = specResult[0]?.sequence());
-    assertEquals(firstResult.size, 1);
-    assert(exists results = firstResult[0]);
-    assertEquals(results.size, 6);
+    value firstResults = specResultAtIndex(0);
+
+    assertEquals(firstResults.size, 1);
+    assertEquals(firstResults[0]?.key, []);
+
+    assert(exists results = firstResults[0]?.item);
 
     assertEquals(results[0], "\nFeature 'should fail with explanation message' failed: 3 is not larger than 4");
     assertEquals(results[1], "\nFeature 'should fail with explanation message' failed: 1 is not equal to 2");
     assertEquals(results[2], "\nFeature 'should fail with explanation message' failed: 10 is not smaller than 9");
-    assert(exists r3 =results[3], r3 is Exception);
+    assert(exists r3 = results[3], r3 is Exception);
     assertEquals(results[4], "\nFeature 'should fail with explanation message' failed: expected to exist but was null");
     assertEquals(results[5], "\nFeature 'should fail with explanation message' failed: expected true but was false");
+
+    assertEquals(results.size, 6);
 }
 
 test shared void featuresShouldFailWithExplanationMessageForFailedExamples() {
@@ -167,22 +177,30 @@ test shared void featuresShouldFailWithExplanationMessageForFailedExamples() {
 
     assertEquals(specResult.size, 1);
 
-    assert(exists firstResult = specResult[0]?.sequence());
-    assertEquals(firstResult.size, 2);
+    assert(exists results = specResult[0]?.sequence());
+    assertEquals(results.size, 2);
+    assert(exists [example1, resultsGetter1] = results[0]?.pair);
 
-    assert(exists firstResults = firstResult[0]);
-    assertEquals(firstResults.size, 3);
+    value results1 = resultsGetter1().sequence();
+    assertEquals(results1.size, 3);
 
-    assertEquals(firstResults[0], "\nFeature 'desc' failed: a is not larger than b [a, b]");
-    assertEquals(firstResults[1], "\nFeature 'desc' failed: a is not equal to b [a, b]");
-    assertEquals(firstResults[2], success);
+    assertEquals(results1[0], "\nFeature 'desc' failed: a is not larger than b [a, b]");
+    assertEquals(results1[1], "\nFeature 'desc' failed: a is not equal to b [a, b]");
+    assertEquals(results1[2], success);
 
-    assert(exists secondResults = firstResult[1]);
-    assertEquals(secondResults.size, 3);
+    assertEquals(example1, ["a", "b"]);
 
-    assertEquals(secondResults[0], "\nFeature 'desc' failed: c is not larger than d [c, d]");
-    assertEquals(secondResults[1], "\nFeature 'desc' failed: c is not equal to d [c, d]");
-    assert(exists sr2 = secondResults[2], sr2 is Exception);
+    assert(exists [example2, resultsGetter2] = results[1]?.pair);
+
+    value results2 = resultsGetter2().sequence();
+
+    assertEquals(results2.size, 3);
+
+    assertEquals(results2[0], "\nFeature 'desc' failed: c is not larger than d [c, d]");
+    assertEquals(results2[1], "\nFeature 'desc' failed: c is not equal to d [c, d]");
+    assert(exists sr2 = results2[2], sr2 is Exception);
+
+    assertEquals(example2, ["c", "d"]);
 }
 
 test shared void featuresShouldStopAfterFailingTooManyTimes() {
@@ -197,24 +215,20 @@ test shared void featuresShouldStopAfterFailingTooManyTimes() {
 
     assertEquals(specResult.size, 1);
 
-    assert(exists firstResult = specResult[0]?.sequence());
+    value firstResults = specResultAt(specResult)(0);
 
-    function successCases(SpecCaseResult[] results)
-            => results.every((result) => result is Success);
+    value examples = firstResults*.key;
+    value results = firstResults*.item;
 
-    assert(firstResult.take(10).every(successCases));
-
-    function singleFailure(Integer -> SpecCaseResult[] entry) {
-        value index = entry.key;
-        value results = entry.item;
-        assertEquals(results.size, 1);
-        assertEquals(results.first, "\nFeature failed: FAIL [``index + 11``]");
-        return true;
-    }
-
-    assert(firstResult.skip(10).take(4).indexed.every(singleFailure));
-
-    assertEquals(firstResult.size, 14);
+    assertEquals(examples, (1..100).collect((i) => [i]));
+    assertEquals(results[0..9], [[success]].cycled.take(10).sequence());
+    assertEquals(results[10..13], [
+        ["\nFeature failed: FAIL [11]"],
+        ["\nFeature failed: FAIL [12]"],
+        ["\nFeature failed: FAIL [13]"],
+        ["\nFeature failed: FAIL [14]"]
+    ]);
+    assertEquals(results[14..99], [[]].cycled.take(100 - 14).sequence());
 }
 
 test shared void errorCheckShouldFailWithExplanationMessageForEachExample() {
@@ -234,14 +248,19 @@ test shared void errorCheckShouldFailWithExplanationMessageForEachExample() {
 
     assertEquals(specResult.size, 2);
 
-    assert(exists firstResult = specResult[0]?.sequence());
-    assertEquals(firstResult.size, 2);
-    assertEquals(firstResult[0], ["\nErrorCheck '``desc``' failed: expected ``platformIndependentName(`MutationException`)`` but threw ``Exception("Bad")`` [1, 2]"]);
-    assertEquals(firstResult[1], ["\nErrorCheck '``desc``' failed: expected ``platformIndependentName(`MutationException`)`` but threw ``Exception("Bad")`` [3, 4]"]);
+    value firstResults = specResultAt(specResult)(0);
+    value secondResults = specResultAt(specResult)(1);
 
-    assert(exists secondResult = specResult[1]?.sequence());
-    assertEquals(secondResult.size, 1);
-    assertEquals(secondResult[0], ["\nErrorCheck failed: no Exception thrown"]);
+    assertEquals(firstResults.size, 2);
+    assertEquals(firstResults[0], [1, 2] -> [
+        "\nErrorCheck '``desc``' failed: expected ``platformIndependentName(`MutationException`)`` but threw ``Exception("Bad")`` [1, 2]"
+    ]);
+    assertEquals(firstResults[1], [3, 4] -> [
+        "\nErrorCheck '``desc``' failed: expected ``platformIndependentName(`MutationException`)`` but threw ``Exception("Bad")`` [3, 4]"
+    ]);
+
+    assertEquals(secondResults.size, 1);
+    assertEquals(secondResults[0], [] -> ["\nErrorCheck failed: no Exception thrown"]);
 }
 
 test shared void trivialForAllTestShouldSucceed() {
@@ -252,11 +271,14 @@ test shared void trivialForAllTestShouldSucceed() {
 
     assertEquals(specResult.size, 2);
 
-    assert(exists firstResult = specResult[0]?.sequence());
-    assertEquals(firstResult.sequence(), [[success]].cycled.take(100).sequence());
+    value firstResult = specResultAt(specResult)(0);
+    value secondResult = specResultAt(specResult)(1);
 
-    assert(exists secondResult = specResult[1]?.sequence());
-    assertEquals(firstResult.sequence(), [[success]].cycled.take(100).sequence());
+    assertEquals(expect(set(firstResult*.key).size, toBe(atLeast(90))), success);
+    assertEquals(firstResult*.item, [[success]].cycled.take(100).sequence());
+
+    assertEquals(expect(set(secondResult*.key).size, toBe(atLeast(90))), success);
+    assertEquals(secondResult*.item, [[success]].cycled.take(100).sequence());
 }
 
 test shared void trivialPropertyChecksShouldSucceed() {
@@ -267,8 +289,9 @@ test shared void trivialPropertyChecksShouldSucceed() {
 	}.run();
 
 	assertEquals(specResult.size, 1);
-	assert(exists firstResult = specResult.first);
-	assertEquals(firstResult.sequence(), [[success]].cycled.take(100).sequence());
+	value firstResult = specResultAt(specResult)(0);
+	assertEquals(expect(set(firstResult*.key).size, toBe(atLeast(90))), success);
+	assertEquals(firstResult*.item, [[success]].cycled.take(100).sequence());
 }
 
 test shared void iterablePropertyChecksShouldSucceed() {
@@ -279,8 +302,8 @@ test shared void iterablePropertyChecksShouldSucceed() {
     }.run();
 
     assertEquals(specResult.size, 1);
-    assert(exists firstResult = specResult.first);
-    assertEquals(firstResult.sequence(), [[success]].cycled.take(100).sequence());
+    value firstResult = specResultAt(specResult)(0);
+    assertEquals(firstResult*.item, [[success]].cycled.take(100).sequence());
 }
 
 test shared void limitedCountPropertyChecksShouldSucceed() {
@@ -290,13 +313,17 @@ test shared void limitedCountPropertyChecksShouldSucceed() {
             description = "test1";
             sampleCount = testSamples;
             when(String string) => [string.size];
-            assertions = { (Integer len) => expect(len, largerThan(-1)) };
+            assertions = {
+                (Integer len) => expect(len, largerThan(-1)),
+                (Integer len) => expect(len, atLeast(0)),
+                (Integer len) => expect(len, atLeast(0))
+            };
         }
     }.run();
 
     assertEquals(specResult.size, 1);
-    assert(exists firstResult = specResult.first);
-    assertEquals(firstResult.sequence(), [[success, success, success]].cycled.take(testSamples).sequence());
+    value firstResult = specResultAt(specResult)(0);
+    assertEquals(firstResult*.item, [[success, success, success]].cycled.take(testSamples).sequence());
 }
 
 test shared void manyArgumentsPropertyChecksShouldSucceed() {
@@ -312,8 +339,9 @@ test shared void manyArgumentsPropertyChecksShouldSucceed() {
     }.run();
 
     assertEquals(specResult.size, 1);
-    assert(exists firstResult = specResult.first);
-    assertEquals(firstResult.sequence(), [[success, success, success]].cycled.take(100).sequence());
+    value firstResult = specResultAt(specResult)(0);
+    assertEquals(expect(set(firstResult*.key).size, toBe(atLeast(90))), success);
+    assertEquals(firstResult*.item, [[success, success, success]].cycled.take(100).sequence());
 }
 
 test shared void limitedCountBadPropertyChecksShouldFail() {
@@ -328,14 +356,15 @@ test shared void limitedCountBadPropertyChecksShouldFail() {
     }.run();
 
     assertEquals(specResult.size, 1);
-    assert(exists firstResult = specResult.first?.sequence());
+    value firstResult = specResultAt(specResult)(0);
 
     assertEquals(firstResult.size, testSamples);
 
     for (exampleResults in firstResult) {
-        assertEquals(exampleResults.size, 1);
-        assert(is AssertionFailure assertionResult = exampleResults[0]);
-        assertEquals(expect(assertionResult, to(containSubsection(* " is not larger than "))), success);
+        value [example, results]= exampleResults.pair;
+        assertEquals(results.size, 1);
+        assert(is AssertionFailure assertionResult = results[0]);
+        assertEquals(expect(assertionResult, to(containSubsection(* " is not larger than ``100M``"))), success);
     }
 }
 
@@ -355,38 +384,14 @@ test shared void whenFunctionMustRunOnceForAllAssertions() {
     }.run();
 
     assertEquals(specResult.size, 1);
-    assert(exists firstResult = specResult.first);
-    assertEquals(firstResult.sequence(), [[success, success, success, success]]);
-}
-
-test shared void allAssertionsMustRunForEachExampleInTurn() {
-    value specResult = Specification {
-        feature {
-            examples = [ [1], [2] ];
-            when = function(Integer n) => [n];
-            (Integer n) => expect(n, equalTo(n + 1)),
-            (Integer n) => expect(n, largerThan(n + 1))
-        }
-    }.collectRunnables();
-
-    assertEquals(specResult.size, 1);
-    value firstResult = specResult.first.sequence();
-
-    value firstExampleResults = firstResult[0];
-    assertEquals(firstExampleResults, [
-        "\nFeature failed: 1 is not equal to 2 [1]",
-        "\nFeature failed: 1 is not larger than 2 [1]"]);
-
-    value secondExampleResults = firstResult[1];
-    assertEquals(secondExampleResults, [
-        "\nFeature failed: 2 is not equal to 3 [2]",
-        "\nFeature failed: 2 is not larger than 3 [2]"]);
+    value firstResult = specResultAt(specResult)(0);
+    assertEquals(firstResult*.item, [[success, success, success, success]]);
 }
 
 test shared void whenFunctionMustRunOnceForEachExampleForAllAssertions() {
     value seenNumbers = HashSet<Integer>();
 
-    BlockResult[] specResults = Specification {
+    value specResult = Specification {
         feature {
             examples = [ [1], [2] ];
             when = function(Integer n) {
@@ -400,13 +405,11 @@ test shared void whenFunctionMustRunOnceForEachExampleForAllAssertions() {
         }
     }.run();
 
-    assertEquals(1, specResults.size);
+    assertEquals(specResult.size, 1);
+    value firstResult = specResultAt(specResult)(0);
 
-    assert(exists featureResult = specResults[0]?.sequence());
-
-    assertEquals(featureResult, [
-        [success, success, success], // first example
-        [success, success, success]  // second example
-    ]);
+    assertEquals(firstResult, [
+        [1] -> [success, success, success],
+        [2] -> [success, success, success]]);
 }
 
