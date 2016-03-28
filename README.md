@@ -541,3 +541,18 @@ if you use the `*` (spread) operator. For example:
 expect("ABCDEFG", to(containSubsection(*"CD")));
 ```
 
+## Debugging/Logging
+
+Sometimes, it may be necessary to get more details about what `specks` is doing (what examples are being used,
+which specification is currently running etc.) so that you can diagnose any issues you may be having with your tests.
+
+You can get lots (or just a little bit) of details if you enable logging. `specks` uses the Ceylon 
+[logging API](https://modules.ceylon-lang.org/repo/1/ceylon/logging/1.2.2/module-doc/api/index.html) to log.
+
+You can configure the level at which `specks` logs like this:
+
+```ceylon
+logger(`module com.athaydes.specks`).priority = debug;
+```
+
+To get any output at all, you need to configure a log writer. See The Ceylon documentation for details.
