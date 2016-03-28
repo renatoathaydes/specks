@@ -77,7 +77,7 @@ To see real examples of `specks` Specifications, just looks at `specks`' own
 First of all, import Specks in your module.ceylon file:
 
 ```ceylon
-import com.athaydes.specks "0.4.0"
+import com.athaydes.specks "0.5.0"
 ```
 
 To run a Specification using Ceylon's testing framework, you just need to annotate your function/class/package/module with the ``testExecutor`` annotation so the test will be run using the ``SpecksTestExecutor``:
@@ -529,3 +529,15 @@ in any quantity.
 ```ceylon
 expect(('1'..'100').map((i) => i % 2), to(containOnly(0, 1)));
 ```
+
+#### containSubsection
+
+Asserts that an Iterable contains a certain sub-section.
+
+It can be used even with Strings (which are `Iterable`s in Ceylon)
+if you use the `*` (spread) operator. For example:
+
+```ceylon
+expect("ABCDEFG", to(containSubsection(*"CD")));
+```
+
