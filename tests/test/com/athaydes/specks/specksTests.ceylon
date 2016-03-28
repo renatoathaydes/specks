@@ -9,7 +9,7 @@ import ceylon.logging {
     Category,
     Priority,
     logger,
-    warn
+    trace
 }
 import ceylon.test {
     test,
@@ -45,7 +45,7 @@ Boolean throwThis(Exception e) {
 
 <Anything[]-><SpecCaseResult>[]>[] specResultAt(SpecResult specResult)(Integer index) =>
         if (exists results = specResult[index]?.sequence()) then
-            results.collect((entry) => entry.key -> entry.item().sequence())
+            results.collect((entry) => entry.key[0] -> entry.item().sequence())
         else [];
 
 
@@ -62,7 +62,9 @@ shared void setupLogging() {
             print("``system.milliseconds - start``: [``prio``] ``message``" + (if (exists error) then " - ``error``" else ""));
         }
     };
-    logger(`module com.athaydes.specks`).priority = warn; // trace;
+    logger(`module com.athaydes.specks`).priority =
+    //         warn;
+     trace;
 }
 
 test shared void happySpecificationThatPassesAllTests() {
@@ -179,7 +181,7 @@ test shared void featuresShouldFailWithExplanationMessageForFailedExamples() {
 
     assert(exists results = specResult[0]?.sequence());
     assertEquals(results.size, 2);
-    assert(exists [example1, resultsGetter1] = results[0]?.pair);
+    assert(exists [[example1, description1], resultsGetter1] = results[0]?.pair);
 
     value results1 = resultsGetter1().sequence();
     assertEquals(results1.size, 3);
@@ -190,7 +192,7 @@ test shared void featuresShouldFailWithExplanationMessageForFailedExamples() {
 
     assertEquals(example1, ["a", "b"]);
 
-    assert(exists [example2, resultsGetter2] = results[1]?.pair);
+    assert(exists [[example2, description2], resultsGetter2] = results[1]?.pair);
 
     value results2 = resultsGetter2().sequence();
 
@@ -201,6 +203,9 @@ test shared void featuresShouldFailWithExplanationMessageForFailedExamples() {
     assert(exists sr2 = results2[2], sr2 is Exception);
 
     assertEquals(example2, ["c", "d"]);
+
+    assertEquals(description1, "Feature 'desc'");
+    assertEquals(description2, "Feature 'desc'");
 }
 
 test shared void featuresShouldStopAfterFailingTooManyTimes() {
