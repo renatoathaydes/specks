@@ -27,6 +27,8 @@ shared alias SpecCaseFailure => String|Exception;
 
 "The result of running a successful Specification case or a successful assertion"
 shared alias Success => Null;
+
+"The single instance of type [[Success]]."
 shared Success success = null;
 
 "The result of running a Specification case.
@@ -199,7 +201,7 @@ Block assertionsWithExamplesBlock<Where, Result>(
     };
 }
 
-"A block that consists of a series of one or more `expect` statements which
+"A [[Block]] that consists of a series of one or more [[com.athaydes.specks.assertion::expect]] statements which
  verify the behaviour of a system."
 shared Block expectations(
     "Assertions that verify the behaviour of a system."
@@ -239,6 +241,8 @@ shared Block feature<out Where = [], in Result = Where>(
     }
 }
 
+"The errorCheck block makes it possible to verify that an error condition produces the expected
+ error or [[Throwable]]."
 shared Block errorCheck<Where = []>(
     "The action being tested in this feature."
     Callable<Anything, Where> when,
@@ -277,6 +281,11 @@ shared Block errorCheck<Where = []>(
     }
 }
 
+"Creates a [[Block]] for quick-check style (or property-based) testing.
+
+ Examples are generated automatically (or using the provided generators) and passed to the provided
+ [[assertion]] function, which should assert that some invariant condition holds for all examples."
+see(`function propertyCheck`)
 shared Block forAll<Where>(
     "Single assertion which should hold for all possible inputs of a given function"
     Callable<AssertionResult, Where> assertion,
@@ -302,6 +311,14 @@ shared Block forAll<Where>(
 	return [forStrings, forIntegers, forFloats, forBooleans];
 }
 
+"Creates a [[Block]] for more advanced quick-check style (or property-based) testing.
+
+ Examples are generated automatically (or using the provided generators) and passed to the provided
+ [[when]] function, which then returns a [[Tuple]] whose elements are passed to the given [[assertions]]
+ to verify that certain conditions hold for all examples that can be generated.
+
+ This Block is similar to a [[feature]], except that examples are automatically generated rather than hand-picked."
+see(`function forAll`, `function feature`)
 shared Block propertyCheck<Result, Where>(
     "The action being tested in this feature."
     Callable<Result, Where> when,

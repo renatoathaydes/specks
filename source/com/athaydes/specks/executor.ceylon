@@ -42,6 +42,8 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
 
     value unroll = functionDeclaration.annotated<UnrollAnnotation>();
 
+    "Ensures that the test function returns a [[Specification]]."
+    throws(`class Exception`, "if the test function has a bad return type")
     shared actual void verifyFunctionReturnType() {
         if(is OpenClassOrInterfaceType openType = functionDeclaration.openType, openType.declaration != `class Specification`) {
             throw Exception("function ``functionDeclaration.qualifiedName`` should return Specification");

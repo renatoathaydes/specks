@@ -7,7 +7,8 @@ import ceylon.language.meta.model {
 
 import com.athaydes.specks {
     success,
-    Success
+    Success,
+    errorCheck
 }
 import com.athaydes.specks.matcher {
     identicalTo,
@@ -24,12 +25,11 @@ shared alias AssertionFailure => String;
 "Express an expectation that the actual value should match some condition
  according to the given matcher.
 
- For example, if you expect a value to be null:
+ For example, if you expect a value to be 5 and to exist (ie. not to be null):
 
- <code>
- expect(actual, toBe(equalTo(5)));
- expect(actual, to(exist));
- </code>"
+     expect(actual, toBe(equalTo(5)));
+     expect(actual, to(exist));
+ "
 shared AssertionResult expect<Element>(Element actual, Matcher<Element> matcher)
         => matcher.matches(actual);
 
@@ -47,15 +47,20 @@ shared AssertionResult expectCondition(Boolean expectedToBeTrue)
 shared String platformIndependentName(Type<Exception>|Throwable exception) =>
         exception.string.replace("::", ".");
 
-shared AssertionResult expectToThrow(Type<Exception> expectedException)(Throwable? result) {
+"Creates an assertion that is successful only if a `when` function throws a [[Throwable]]
+ with the [[expectedType]].
+
+ This assertion is commonly used with the [[errorCheck]] block."
+see(`function errorCheck`)
+shared AssertionResult expectToThrow(Type<Exception> expectedType)(Throwable? result) {
 
     AssertionResult verifyActualException(Throwable result) {
-        if (type(result).exactly(expectedException)) {
+        if (type(result).exactly(expectedType)) {
             return success;
         } else {
             value resultType = platformIndependentName(result);
-            value expectedType = platformIndependentName(expectedException);
-            return "expected ``expectedType`` but threw ``resultType``";
+            value expectedTypeName = platformIndependentName(expectedType);
+            return "expected ``expectedTypeName`` but threw ``resultType``";
         }
     }
 
