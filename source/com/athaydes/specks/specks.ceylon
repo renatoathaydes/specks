@@ -35,9 +35,9 @@ shared Success success = null;
 shared alias SpecCaseResult => SpecCaseFailure|Success;
 
 "The result of running all cases of a [[Block]] of a [[Specification]].
- The key in each entry of the stream represents an example in the block, whereas the value represents
- the lazily-obtained result of all assertions on that example."
-shared alias BlockResult => {<Anything[] -> {SpecCaseResult*}()>*};
+ The key in each entry of the stream represents a Tuple containing an example in the block and the block's description,
+ whereas the value represents the lazily-obtained result of all assertions on that example."
+shared alias BlockResult => {<[Anything[], String] -> {SpecCaseResult*}()>*};
 
 "Final result of running a [[Specification]]."
 shared alias SpecResult => BlockResult[];
@@ -163,7 +163,7 @@ Block assertionsWithoutExamplesBlock<Result>(
     return object satisfies Block {
         description = internalDescription;
 
-        runTests() => { [] -> applyAssertions(applyWhenFunction, assertions, description, [], maxFailuresAllowed) };
+        runTests() => { [[], description] -> applyAssertions(applyWhenFunction, assertions, description, [], maxFailuresAllowed) };
     };
 }
 
@@ -177,9 +177,9 @@ Block assertionsWithExamplesBlock<Where, Result>(
         given Where satisfies Anything[]
         given Result satisfies Anything[] {
 
-    Where->{SpecCaseResult*}() applyExample(Counter failures)(Where example) {
+    [Where, String]->{SpecCaseResult*}() applyExample(Counter failures)(Where example) {
         if (failures.currentValue() >= maxFailuresAllowed) {
-            return example -> (() => {});
+            return [example, internalDescription] -> (() => {});
         }
         value assertionResults = applyAssertions(
             () => applyWhenFunction(example),
@@ -187,7 +187,7 @@ Block assertionsWithExamplesBlock<Where, Result>(
             maxFailuresAllowed,
             failures);
 
-         return example -> assertionResults;
+         return [example, internalDescription] -> assertionResults;
     }
 
     return object satisfies Block {

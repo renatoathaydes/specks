@@ -65,6 +65,14 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
         return spec;
     }
 
+    void runSimpleSpec(TestExecutionContext context, Object? instance, Specification spec) {
+        value blocksResults = spec.run().flatMap(identity).map((it) => it.item);
+        {SpecCaseResult*} assertionResults() {
+            return blocksResults.map((it) => it()).flatMap(identity);
+        }
+        executeTest(context, instance, assertionResults);
+    }
+
     void runUnrolledSpec(TestExecutionContext context, Object? instance, Specification spec) {
         value specResult = spec.run();
         value groupTestListener = GroupTestListener();
@@ -77,10 +85,11 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
             return context.childContext(variantDescription);
         }
 
-        for (index -> blockResult in specResult.indexed) {
-            for (subIndex -> exampleAssertions in blockResult.indexed) {
-                value [example, assertionResults] = exampleAssertions.pair;
-                executeTest(contextFor(index + subIndex + 1, example), instance, assertionResults);
+        variable Integer index = 1;
+        for (blockResult in specResult) {
+            for (exampleAssertions in blockResult) {
+                value example -> assertionResults = exampleAssertions;
+                executeTest(contextFor(index++, example), instance, assertionResults);
             }
         }
 
@@ -155,12 +164,7 @@ shared class SpecksTestExecutor(FunctionDeclaration functionDeclaration, ClassDe
                 runUnrolledSpec(context, instance, spec);
             } else {
                 log.debug("Running simple specification");
-                value blocksResults = spec.run();
-                for (index -> blockResult in blocksResults.indexed) {
-                    for (example -> assertionResults in blockResult) {
-                        executeTest(context, instance, assertionResults);
-                    }
-                }
+                runSimpleSpec(context, instance, spec);
             }
         }
         catch (TestSkippedException e) {
