@@ -299,6 +299,25 @@ shared Specification customTypeGenerators() {
 }
 ```
 
+## The unroll annotation
+
+If you want examples used in your Specification to be more visible in test reports, you can use the `unroll` annotation.
+
+When a Specification is annotated with the `unroll` annotation, each Block and each example within it will have an individual entry
+in the test reports, including the IDE results.
+
+For example, when running the [Samples](tests/test/com/athaydes/specks/sampleSpecifications.ceylon)
+Specification, the report may look like this:
+
+![Simple Spec Results](docs/images/simple-spec-results.png)
+
+If you annotate the `dividingANumberByASmallerNumberAlwaysGivesMoreThanOne` Specification with `unroll`, then the report becomes:
+
+![Unrolled Spec Results](docs/images/unrolled-spec-results.png)
+
+> for obvious reasons, you should avoid the use of the `unroll` annotation on Specifications that have thousands or
+  even millions of examples.
+
 ## Asserting behavior
 
 As you can see in the examples above, all blocks have some kind of assertion(s).

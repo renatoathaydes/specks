@@ -12,7 +12,8 @@ import com.athaydes.specks {
     forAll,
     randomStrings,
     propertyCheck,
-    unroll
+    unroll,
+    randomIntegers
 }
 import com.athaydes.specks.assertion {
     expect
@@ -21,7 +22,8 @@ import com.athaydes.specks.matcher {
     equalTo,
     atMost,
     toBe,
-    atLeast
+    atLeast,
+    largerThan
 }
 
 
@@ -75,6 +77,17 @@ shared class Samples() {
             maxFailuresAllowed = 50;
             generators = [ randomStrings ];
             assertion(String sample) => expect(sample.reversed.reversed, equalTo(sample));
+        }
+    };
+
+    test unroll
+    shared Specification dividingANumberByASmallerNumberAlwaysGivesMoreThanOne()
+            => Specification {
+        forAll {
+            description = "Any number divided by a smaller number always results in a number larger than one";
+            sampleCount = 5;
+            generators = [ () => randomIntegers { lowerBound = 1; higherBound = 1000M; } ];
+            assertion(Integer a, Integer b) => expect((a + b).float / b, toBe(largerThan(1.0)));
         }
     };
 
