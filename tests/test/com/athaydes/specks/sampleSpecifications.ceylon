@@ -11,7 +11,8 @@ import com.athaydes.specks {
     feature,
     forAll,
     randomStrings,
-    propertyCheck
+    propertyCheck,
+    unroll
 }
 import com.athaydes.specks.assertion {
     expect
@@ -23,6 +24,7 @@ import com.athaydes.specks.matcher {
     atLeast
 }
 
+
 testExecutor (`class SpecksTestExecutor`)
 shared class Samples() {
 
@@ -32,14 +34,14 @@ shared class Samples() {
             expect(max { 1, 2, 3 }, equalTo(3))
         }
     };
-    
+
     test
     shared Specification aGoodSpec() => Specification {
         feature {
             description = "The String.take() method returns at most n characters, for any given n >= 0";
-            
+
             when(String sample, Integer n) => [sample.take(n), n];
-            
+
             // just a few examples for brevity
             examples = {
                 ["", 0],
@@ -49,17 +51,17 @@ shared class Samples() {
                 ["abc", 5],
                 ["abc", 1k]
             };
-            
+
             ({Character*} result, Integer n) => expect(result.size, toBe(atMost(n)))
         }
     };
-    
+
     test
-    shared Specification propertyBasedSpec() => Specification {
+    shared Specification quickCheckStyleForAllSpec() => Specification {
         forAll((String sample, Integer n)
             => expect(sample.take(n).size, toBe(atMost(n < 0 then 0 else n))))
     };
-    
+
     test
     shared Specification verySimpleForAllSpec() => Specification {
         forAll((String sample) => expect(sample.reversed.reversed, equalTo(sample)))
@@ -75,7 +77,7 @@ shared class Samples() {
             assertion(String sample) => expect(sample.reversed.reversed, equalTo(sample));
         }
     };
-    
+
     test
     shared Specification propertyCheckSpec() => Specification {
         propertyCheck {
@@ -85,32 +87,36 @@ shared class Samples() {
             (Integer left, Integer right) => expect(left, equalTo(right))
         }
     };
-    
+
     ignore test
     shared Specification failedSpec() => Specification {
         forAll((String s) => expect(s.size, atLeast(10)))
     };
-    
-    test
+
+    test unroll
     shared Specification customTypeGenerators() {
-        class MyCustomType(shared String arg) {}
-        
+        class MyCustomType(shared String arg) {
+            string = arg;
+        }
+
         value infiniteStrings = { randomStrings() }.cycled.flatMap(identity).iterator();
-        
+
         function generateRandomString() {
             value next = infiniteStrings.next();
             assert(is String next);
-            return next; 
+            return next;
         }
-        
+
         function generateCustomType() => MyCustomType(generateRandomString());
-        
+
         return Specification {
             forAll {
+                sampleCount = 25;
+                description = "Custom type arg size should be at least 0";
                 generators = [ generateCustomType ];
                 assertion(MyCustomType customType) => expect(customType.arg.size, atLeast(0));
             }
         };
     }
-    
+
 }
