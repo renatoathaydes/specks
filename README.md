@@ -77,7 +77,7 @@ To see real examples of `specks` Specifications, just looks at `specks`' own
 First of all, import Specks in your module.ceylon file:
 
 ```ceylon
-import com.athaydes.specks "0.5.0"
+import com.athaydes.specks "0.6.0"
 ```
 
 To run a Specification using Ceylon's testing framework, you just need to annotate your function/class/package/module with the ``testExecutor`` annotation so the test will be run using the ``SpecksTestExecutor``:
