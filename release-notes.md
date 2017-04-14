@@ -1,5 +1,9 @@
 ## Release Notes:
 
+0.6.0 - 2017 April 14
+
+* upgraded Ceylon version to 1.3.2.
+
 0.5.0 - 2016 March 28
 
 * added support for the `unroll` annotation. This allows each example to be shown individually in reports.
