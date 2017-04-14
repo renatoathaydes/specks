@@ -7,14 +7,13 @@ install:
   - unzip /tmp/ceylon.zip
   - export PATH=$PATH:$PWD/ceylon-$CEYLON_VERSION/bin/
 before_script: 
-  - ceylon compile
+  - ceylon compile com.athaydes.specks
 script: 
-  - ceylon test $TEST_MODULE
+  - ceylon test test.com.athaydes.specks
 env:
   global:
     - CEYLON_VERSION=1.3.2
     - CEYLON="http://ceylon-lang.org/download/dist/1_3_2"
-    - TEST_MODULE="test.com.athaydes.specks"
  
 addons:
   apt:
