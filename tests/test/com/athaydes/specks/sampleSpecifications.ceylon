@@ -23,12 +23,22 @@ import com.athaydes.specks.matcher {
     atMost,
     toBe,
     atLeast,
-    largerThan
+    largerThan,
+    Matcher,
+    sameAs
 }
 
 
 testExecutor (`class SpecksTestExecutor`)
 shared class Samples() {
+
+
+    test
+    shared Specification setsAreEqual() => Specification {
+        expectations {
+            expect(set { 1, 2, 3 }, sameAs(set { 1, 2, 3 }))
+        }
+    };
 
     test
     shared Specification simpleSpec() => Specification {
