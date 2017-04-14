@@ -1,5 +1,7 @@
 # specks
 
+[![Build Status](https://travis-ci.org/renatoathaydes/specks.svg?branch=master)](https://travis-ci.org/renatoathaydes/specks)
+
 **specks** enables a different way to check that your Ceylon code works.
 
 Instead of writing traditional tests, you write specifications.
