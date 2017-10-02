@@ -20,7 +20,7 @@
   so you can avoid having to add it to every function.
 
   For more information, visit Specks' [GitHub page](https://github.com/renatoathaydes/specks)."
-module com.athaydes.specks "0.7.0" {
+module com.athaydes.specks "0.7.1" {
 	shared import ceylon.test "1.3.3.1";
 	shared import ceylon.random "1.3.3";
 	import ceylon.logging "1.3.3";
