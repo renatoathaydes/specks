@@ -21,7 +21,7 @@
 
   For more information, visit Specks' [GitHub page](https://github.com/renatoathaydes/specks)."
 module com.athaydes.specks "0.7.0" {
-	shared import ceylon.test "1.3.3";
+	shared import ceylon.test "1.3.3.1";
 	shared import ceylon.random "1.3.3";
 	import ceylon.logging "1.3.3";
 }
