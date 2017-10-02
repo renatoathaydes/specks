@@ -15,7 +15,6 @@ import com.athaydes.specks.matcher {
 
 "Run the module `com.athaydes.specks`."
 shared void run() {
-    
     void myFunction(Integer i, Integer j) {
         if (i <= 0 || j <= 0) {
             throw Exception();

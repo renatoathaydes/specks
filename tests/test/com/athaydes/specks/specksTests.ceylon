@@ -59,7 +59,12 @@ shared void setupLogging() {
     value start = system.milliseconds;
     addLogWriter {
         void log(Priority prio, Category category, String message, Throwable? error) {
-            print("``system.milliseconds - start``: [``prio``] ``message``" + (if (exists error) then " - ``error``" else ""));
+            if (process.propertyValue("ceylon.logging") exists) {
+                // only log things if the system property is specified...
+                // TODO accept log levels?
+                print("``system.milliseconds - start``: [``prio``] ``message``" +
+                    (if (exists error) then " - ``error``" else ""));
+            }
         }
     };
     logger(`module com.athaydes.specks`).priority =
