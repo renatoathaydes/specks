@@ -12,8 +12,8 @@ script:
   - ceylon test test.com.athaydes.specks
 env:
   global:
-    - CEYLON_VERSION=1.3.2
-    - CEYLON="http://ceylon-lang.org/download/dist/1_3_2"
+    - CEYLON_VERSION=1.3.3
+    - CEYLON="http://ceylon-lang.org/download/dist/1_3_3"
  
 addons:
   apt:
