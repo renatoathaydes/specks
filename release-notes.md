@@ -1,5 +1,13 @@
 ## Release Notes:
 
+0.7.1 - 2017 October 02
+
+* upgraded `ceylon.test` version to 1.3.3.1 due to critical bug in previous version.
+
+0.7.0 - 2017 October 02
+
+* upgraded Ceylon version to 1.3.3.
+
 0.6.0 - 2017 April 14
 
 * upgraded Ceylon version to 1.3.2.
