@@ -6,3 +6,5 @@
 .classpath
 .settings
 /.exploded/
+/.idea/
+*.iml
