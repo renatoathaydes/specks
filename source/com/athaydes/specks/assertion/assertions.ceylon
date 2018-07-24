@@ -44,15 +44,22 @@ shared AssertionResult expectCondition(Boolean expectedToBeTrue)
         => expect(expectedToBeTrue, toBe(identicalTo(true)));
 
 "Platform independent name of an Exception"
-shared String platformIndependentName(Type<Exception>|Throwable exception) =>
+shared String platformIndependentName(Type<Throwable>|Throwable exception) =>
         exception.string.replace("::", ".");
 
+"A value to signal \"no comparison should be done\" in an assertion"
+shared object noCheck {}
+
 "Creates an assertion that is successful only if a `when` function throws a [[Throwable]]
- with the [[expectedType]].
+ with exactly the [[expectedType]].
+ 
+ If the type check passes and parameter `message` is a String or `null`, the message of the `result` Throwable
+ must match that value for the assertion to be successful. The message is not checked if the `message` parameter is
+ set to `noMessageCheck` (the default value).
 
  This assertion is commonly used with the [[errorCheck]] block."
 see(`function errorCheck`)
-shared AssertionResult expectToThrow(Type<Exception> expectedType)(Throwable? result) {
+shared AssertionResult expectToThrow(Type<Throwable> expectedType, String? | \InoCheck message = noCheck)(Throwable? result) {
 
     AssertionResult verifyActualException(Throwable result) {
         if (type(result).exactly(expectedType)) {
