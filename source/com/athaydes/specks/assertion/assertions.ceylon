@@ -43,7 +43,7 @@ shared AssertionResult expect<Element>(Element actual, Matcher<Element> matcher)
 shared AssertionResult expectCondition(Boolean expectedToBeTrue)
         => expect(expectedToBeTrue, toBe(identicalTo(true)));
 
-"Platform independent name of an Exception"
+"Platform independent name of a Throwable"
 shared String platformIndependentName(Type<Throwable>|Throwable exception) =>
         exception.string.replace("::", ".");
 
@@ -55,7 +55,7 @@ shared object noCheck {}
  
  If the type check passes and parameter `message` is a String or `null`, the message of the `result` Throwable
  must match that value for the assertion to be successful. The message is not checked if the `message` parameter is
- set to `noMessageCheck` (the default value).
+ set to `noCheck` (the default value).
 
  This assertion is commonly used with the [[errorCheck]] block."
 see(`function errorCheck`)
