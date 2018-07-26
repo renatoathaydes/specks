@@ -13,7 +13,8 @@ import com.athaydes.specks {
 import com.athaydes.specks.matcher {
     identicalTo,
     toBe,
-    Matcher
+    Matcher,
+    sameAs
 }
 
 "The result of making an assertion."
@@ -63,7 +64,10 @@ shared AssertionResult expectToThrow(Type<Throwable> expectedType, String? | \In
 
     AssertionResult verifyActualException(Throwable result) {
         if (type(result).exactly(expectedType)) {
-            return success;
+            if (is \InoCheck message) {
+                return success;
+            }
+            return sameAs(message).matches(result.message);
         } else {
             value resultType = platformIndependentName(result);
             value expectedTypeName = platformIndependentName(expectedType);
