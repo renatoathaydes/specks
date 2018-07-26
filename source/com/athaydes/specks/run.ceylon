@@ -20,16 +20,16 @@ shared void run() {
             throw Exception();
         }
     }
-    
+
     "Example custom matcher"
-    function sorted<Item>(Boolean ascending) 
+    function sorted<Item>(Boolean ascending)
             given Item satisfies Comparable<Item>
             => object satisfies Matcher<{Item*}> {
-        
+
         value compare = ascending
                 then ((Item i, Item prev) => i <= prev)
                 else ((Item i, Item prev) => i > prev);
-        
+
         shared actual AssertionResult matches({Item*} actual) {
             if (is {Item+} actual, actual.size > 1) {
                 variable value prev = actual.first;
@@ -44,7 +44,7 @@ shared void run() {
             return success;
         }
     };
-    
+
     [Specification {
         feature {
             description = "== operator should be symmetric";
@@ -143,19 +143,30 @@ shared void run() {
             (Float toDeposit, Float afterDeposit, Float afterWithdrawal, Float finalBalance)
                     => expect(afterDeposit, equalTo(toDeposit)),
             (Float toDeposit, Float afterDeposit, Float afterWithdrawal, Float finalBalance)
-                    => expect(afterWithdrawal, equalTo(finalBalance)) 
+                    => expect(afterWithdrawal, equalTo(finalBalance))
         }
     }
-    ].collect((Specification speck) => print(speck.run()));
-    
+    ].collect((Specification speck) {
+        value results = speck.run();
+        for (specResult in results) {
+            for ([example, description] -> exampleResults in specResult) {
+                print(description);
+                for (exampleResult in exampleResults()) {
+                    value prefix = if (example.empty) then "* " else "* Example (``example``): ";
+                    print("``prefix````exampleResult else "OK"``");
+                }
+            }
+        }
+    });
+
 }
 
 class BankAccount() {
-    
+
     shared void deposit(Float amount) {}
 
     shared void withdraw(Float amount) {}
-    
+
     shared Float balance = 2.0;
     
 }
