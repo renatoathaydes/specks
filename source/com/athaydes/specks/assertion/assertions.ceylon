@@ -44,18 +44,18 @@ shared AssertionResult expectCondition(Boolean expectedToBeTrue)
         => expect(expectedToBeTrue, toBe(identicalTo(true)));
 
 "Platform independent name of an Exception"
-shared String platformIndependentName(Type<Exception>|Throwable exception) =>
+shared String platformIndependentName(Type<Throwable>|Throwable exception) =>
         exception.string.replace("::", ".");
 
 "Creates an assertion that is successful only if a `when` function throws a [[Throwable]]
- with the [[expectedType]].
+ with the [[expectedType]], or a subtype of it.
 
  This assertion is commonly used with the [[errorCheck]] block."
 see(`function errorCheck`)
-shared AssertionResult expectToThrow(Type<Exception> expectedType)(Throwable? result) {
+shared AssertionResult expectToThrow(Type<Throwable> expectedType)(Throwable? result) {
 
     AssertionResult verifyActualException(Throwable result) {
-        if (type(result).exactly(expectedType)) {
+        if (type(result).subtypeOf(expectedType)) {
             return success;
         } else {
             value resultType = platformIndependentName(result);
