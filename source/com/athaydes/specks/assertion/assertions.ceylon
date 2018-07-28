@@ -13,7 +13,8 @@ import com.athaydes.specks {
 import com.athaydes.specks.matcher {
     identicalTo,
     toBe,
-    Matcher
+    Matcher,
+    sameAs
 }
 
 "The result of making an assertion."
@@ -47,16 +48,26 @@ shared AssertionResult expectCondition(Boolean expectedToBeTrue)
 shared String platformIndependentName(Type<Throwable>|Throwable exception) =>
         exception.string.replace("::", ".");
 
+"A value to signal \"no comparison should be done\" in an assertion"
+shared object noCheck {}
+
 "Creates an assertion that is successful only if a `when` function throws a [[Throwable]]
  with the [[expectedType]], or a subtype of it.
+ 
+ If the type check passes and parameter [[message]] is a String or `null`, the message of the [[result]] Throwable
+ must match that value for the assertion to be successful. The message is not checked if the [[message]] parameter is
+ set to [[noCheck]] (the default value).
 
  This assertion is commonly used with the [[errorCheck]] block."
 see(`function errorCheck`)
-shared AssertionResult expectToThrow(Type<Throwable> expectedType)(Throwable? result) {
+shared AssertionResult expectToThrow(Type<Throwable> expectedType, String? | \InoCheck message = noCheck)(Throwable? result) {
 
     AssertionResult verifyActualException(Throwable result) {
         if (type(result).subtypeOf(expectedType)) {
-            return success;
+            if (is \InoCheck message) {
+                return success;
+            }
+            return sameAs(message).matches(result.message);
         } else {
             value resultType = platformIndependentName(result);
             value expectedTypeName = platformIndependentName(expectedType);
