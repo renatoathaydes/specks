@@ -103,12 +103,17 @@ test shared void happySpecificationThatPassesAllTests() {
             examples = {[1], [2]};
             when(Integer i) => throwThis(Exception("Bad"));
             expectToThrow(`Exception`)
+        },
+        errorCheck {
+            description = "Exception subtypes are acceptable";
+            when() => 1 / 0;
+            expectToThrow(`Exception`)
         }
     }.run();
 
     value specResultAtIndex = specResultAt(specResult);
 
-    assertEquals(specResult.size, 4); // number of blocks
+    assertEquals(specResult.size, 5); // number of blocks
 
     assertEquals(specResultAtIndex(0), [
         [2, 4, 6] -> [success, success],
@@ -124,6 +129,9 @@ test shared void happySpecificationThatPassesAllTests() {
     assertEquals(specResultAtIndex(3), [
         [1] -> [success],
         [2] -> [success]]);
+
+    assertEquals(specResultAtIndex(4), [
+        [] -> [success]]);
 }
 
 test shared void featuresShouldFailWithExplanationMessage() {
@@ -141,12 +149,22 @@ test shared void featuresShouldFailWithExplanationMessage() {
             error,
             () => expect(null, exist),
             () => expect([1,2,3].contains(5), identicalTo(true))
+        },
+        errorCheck {
+            description = "No throws when an error is expected";
+            when() => [];
+            expectToThrow(`Exception`)
+        },
+        errorCheck {
+            description = "Non-subtypes are NOT acceptable";
+            when() => throwThis(Exception("Bad"));
+            expectToThrow(`MutationException`)
         }
     }.run();
 
     value specResultAtIndex = specResultAt(specResult);
 
-    assertEquals(specResult.size, 1);
+    assertEquals(specResult.size, 3);
 
     value firstResults = specResultAtIndex(0);
 
@@ -163,6 +181,27 @@ test shared void featuresShouldFailWithExplanationMessage() {
     assertEquals(results[5], "\nFeature 'should fail with explanation message' failed: expected true but was false");
 
     assertEquals(results.size, 6);
+
+    value errorCheckResults = specResultAtIndex(1);
+
+    assertEquals(errorCheckResults.size, 1);
+    assertEquals(errorCheckResults[0]?.key, []);
+
+    assert(exists results2 = errorCheckResults[0]?.item);
+    assertEquals(results2[0], "\nErrorCheck 'No throws when an error is expected' failed: no Exception thrown");
+    assertEquals(results2.size, 1);
+
+    value errorCheckResults2 = specResultAtIndex(2);
+
+    assertEquals(errorCheckResults2.size, 1);
+    assertEquals(errorCheckResults2[0]?.key, []);
+
+    assert(exists results3 = errorCheckResults2[0]?.item);
+    assertEquals(results3[0], "\nErrorCheck 'Non-subtypes are NOT acceptable' failed: \
+                               expected ceylon.language.meta.model.MutationException \
+                               but threw ceylon.language.Exception \"Bad\"");
+
+    assertEquals(results3.size, 1);
 }
 
 test shared void featuresShouldFailWithExplanationMessageForFailedExamples() {
